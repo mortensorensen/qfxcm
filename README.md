@@ -1,5 +1,7 @@
 # Q wrapper for FXCM's Forex Connect API
 
+*Note: This repository is still under development. Actual Q code is still missing!*
+
 Download the ForexConnect API at <http://fxcodebase.com/wiki/index.php/Download>.
 
 Create a symbolic link to your ForexConnect API with
