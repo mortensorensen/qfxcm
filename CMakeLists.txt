@@ -1,7 +1,7 @@
 cmake_minimum_required (VERSION 2.6) 
  
 set (PROJECT QFXCM)
-  
+
 project (${PROJECT}) 
 
 if (DEFINED Mac32)
@@ -9,7 +9,7 @@ if (DEFINED Mac32)
 elseif (${CMAKE_SYSTEM} MATCHES "Linux" AND ${CMAKE_SYSTEM_PROCESSOR} MATCHES "i[3-6]86")
     set (ARCHFLAGS "-march=i486")
 else ()
-    set (ARCHFLAGS "")
+    set (ARCHFLAGS "-arch i386")
 endif ()
 
 if (${CMAKE_SYSTEM} MATCHES "Linux")
@@ -33,6 +33,7 @@ set (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} ${ARCHFLAGS}")
 set (CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS} ${ARCHFLAGS}")
 set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS} ${ARCHFLAGS}")
 
+# Default build mode
 if (NOT CMAKE_BUILD_TYPE)
     set (CMAKE_BUILD_TYPE Release CACHE STRING
          "Choose the type of build, options are: None Debug Release RelWithDebInfo MinSizeRel."
@@ -54,6 +55,7 @@ set (HEADERS
     source/ResponseListener.h
     source/SampleParams.h
     source/SessionStatusListener.h
+    source/k.h
     )
      
 set (SOURCES
