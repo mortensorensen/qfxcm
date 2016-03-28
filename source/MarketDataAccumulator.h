@@ -19,4 +19,4 @@ protected:
     virtual ~MarketDataAccumulator();
 };
 
-#endif /* MarketDataAccumulator_h */
+#endif
