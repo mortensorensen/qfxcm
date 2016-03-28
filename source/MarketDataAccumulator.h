@@ -4,19 +4,24 @@
 #include "stdafx.h"
 #include "ResponseListener.h"
 #include "CommonSources.h"
-#include "k.h"
+//#include "Helpers.h"
 
 class MarketDataAccumulator
 {
 public:
-    void addReader(O2G2Ptr<IO2GMarketDataSnapshotResponseReader> *reader);
+    MarketDataAccumulator();
+    virtual ~MarketDataAccumulator();
+    
+    void addReader(O2G2Ptr<IO2GMarketDataSnapshotResponseReader> reader);
     const K getTable();
     
 private:
-    std::vector<O2G2Ptr<IO2GMarketDataSnapshotResponseReader*> > mReaders;
+    std::vector<O2G2Ptr<IO2GMarketDataSnapshotResponseReader> > mReaders;
     
-protected:
-    virtual ~MarketDataAccumulator();
+    const J totalSize();
+    
+    const K getTickTable();
+    const K getBarTable();
 };
 
-#endif /* MarketDataAccumulator_h */
+#endif

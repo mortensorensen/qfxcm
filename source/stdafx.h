@@ -18,6 +18,8 @@
 #include <cstring>
 #include <cmath>
 
+#include "k.h"
+
 #define _TIMEOUT 30000
 
 // TODO: reference additional headers your program requires here

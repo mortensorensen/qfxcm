@@ -1,35 +1,45 @@
-#ifndef _HELPERS
-#define _HELPERS
+#ifndef HELPERS_h
+#define HELPERS_h
 
-#include "k.h"
 #include "stdafx.h"
+
+#define DBG(x, e) {if(x) O("%s\n", e);}
+#define Q(x, e) P(x, krr((S)e))
+
+#define TO_CPP(w) (reinterpret_cast<Wrapper *>(w))
+#define TO_C(w) (reinterpret_cast<wrapper *>(w))
+
 
 F zu(I u) { return u / 8.64e4 - 10957; }  // kdb+ datetime from unix
 I uz(F f) { return 86400 * (f + 10957); } // unix from kdb+ datetime
-J pu(I u) {
-    return 8.64e13 * (u / 8.64e4 - 10957);
-} // kdb+ timestamp from unix, use ktj(Kj,n) to create timestamp from n
+J pu(I u) { return 8.64e13 * (u / 8.64e4 - 10957); } // kdb+ timestamp from unix, use ktj(Kj,n) to create timestamp from n
 I up(J f) { return (f / 8.64e13 + 10957) * 8.64e4; } // unix from kdb+ timestamp
+
 struct tm *lt(int kd) {
     time_t t = uz(kd);
     return localtime(&t);
 }
+
 struct tm *lt_r(int kd, struct tm *res) {
     time_t t = uz(kd);
     return localtime_r(&t, res);
 }
+
 struct tm *gt(int kd) {
     time_t t = uz(kd);
     return gmtime(&t);
 }
+
 struct tm *gt_r(int kd, struct tm *res) {
     time_t t = uz(kd);
     return gmtime_r(&t, res);
 }
+
 char *fdt(struct tm *ptm, char *d) {
     strftime(d, 10, "%Y.%m.%d", ptm);
     return d;
 }
+
 void tsms(unsigned ts, char *h, char *m, char *s, short *mmm) {
     *h = ts / 3600000;
     ts -= 3600000 * (*h);
@@ -39,6 +49,7 @@ void tsms(unsigned ts, char *h, char *m, char *s, short *mmm) {
     ts -= 1000 * (*s);
     *mmm = ts;
 }
+
 char *ftsms(unsigned ts, char *d) {
     char h, m, s;
     short mmm;
@@ -47,20 +58,7 @@ char *ftsms(unsigned ts, char *d) {
     return d;
 }
 
-static bool KTimeToOleTime(K t, double *mDateTo) {
-    struct tm tmBuf = *lt(t->i);
-    CO2GDateUtils::CTimeToOleTime(&tmBuf, mDateTo);
-    R kb(1);
-}
-
-// kdb+ time from COleTime
-static F zo(const double dt) {
-//    struct tm *t = NULL;
-//    CO2GDateUtils::OleTimeToCTime(dt, t);
-//    R mktime(t);
-//    R zu(mktime(t));
-    R dt - 36526;
-}
+F zo(const F dt) { R dt - 36526; } // kdb+ time from COleTime
 
 K consume_event(const std::string &fun, K x) {
     K ret = k(0, (S)fun.c_str(), x, (K)0);

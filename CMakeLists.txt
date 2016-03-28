@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 2.6) 
+cmake_minimum_required (VERSION 3.1.0 FATAL_ERROR) 
  
 set (PROJECT qfxcm)
 
@@ -74,9 +74,9 @@ set (HEADERS
     source/SessionStatusListener.h
     source/LoginParams.h
     source/k.h
-    source/MarketDataAccumulator.h
     source/Helpers.h
     source/Wrapper.h
+    source/MarketDataAccumulator.h
     )
      
 set (SOURCES
@@ -84,9 +84,9 @@ set (SOURCES
     source/ResponseListener.cpp
     source/SessionStatusListener.cpp
     source/LoginParams.cpp
-    source/MarketDataAccumulator.cpp
     source/Helpers.cpp
     source/Wrapper.cpp
+    source/MarketDataAccumulator.cpp
     ) 
 
 add_library (${PROJECT} SHARED ${HEADERS} ${SOURCES})
@@ -113,6 +113,8 @@ if (${CMAKE_SYSTEM} MATCHES "Linux")
           COMPILE_FLAGS "-m32 -fPIC"
           LINK_FLAGS "-shared -Wl,-rpath,."
           PREFIX "lib"
+          CXX_STANDARD 14
+          CXX_STANDARD_REQUIRED ON
     )
 elseif (${CMAKE_SYSTEM} MATCHES "Darwin")
     set_target_properties (${PROJECT} PROPERTIES
@@ -123,5 +125,7 @@ elseif (${CMAKE_SYSTEM} MATCHES "Darwin")
           LINK_FLAGS "-m32 -undefined dynamic_lookup -Wl,-rpath,@loader_path,-rpath,./"
           PREFIX "lib"
           SUFFIX ".so"
+          CXX_STANDARD 14
+          CXX_STANDARD_REQUIRED ON
     )
 endif ()
