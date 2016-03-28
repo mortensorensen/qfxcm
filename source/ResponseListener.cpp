@@ -4,6 +4,7 @@
 #include <sstream>
 #include <iomanip>
 #include "ResponseListener.h"
+#include "k.h"
 
 ResponseListener::ResponseListener(IO2GSession *session)
 {
@@ -87,7 +88,7 @@ void ResponseListener::onRequestFailed(const char *requestId , const char *error
 {
     if (mRequestID == requestId)
     {
-        std::cout << "The request has been failed. ID: " << requestId << " : " << error << std::endl;
+        O("The request has been failed. ID: %s : %s\n", requestId, error);
         SetEvent(mResponseEvent);
     }
 }
