@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 2.6) 
  
-set (PROJECT QFXCM)
+set (PROJECT qfxcm)
 
 project (${PROJECT}) 
 
@@ -12,16 +12,15 @@ else ()
     set (ARCHFLAGS "-arch i386")
 endif ()
 
-if (${CMAKE_SYSTEM} MATCHES "Linux")
-    set (SHAREDSUFFIX "so")
-elseif (${CMAKE_SYSTEM} MATCHES "Darwin")
-    set (SHAREDSUFFIX "dylib")
-endif ()
+add_definitions (-DKXVER=3)
+
+set (SHAREDSUFFIX "so")
+
+set (CMAKE_OSX_ARCHITECTURES i386)
 
 set (SAMPLE_TOOLS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/ForexConnectAPI/samples/cpp/sample_tools")
 set (FOREXCONNECT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/ForexConnectAPI")
 
-set (EXECUTABLE_OUTPUT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/bin)
 set (LIBRARY_OUTPUT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/bin)
 
 set (CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS} ${ARCHFLAGS}")
@@ -41,42 +40,62 @@ if (NOT CMAKE_BUILD_TYPE)
     )
 endif (NOT CMAKE_BUILD_TYPE)
 
+# use, i.e. don't skip the full RPATH for the build tree
+SET(CMAKE_SKIP_BUILD_RPATH FALSE)
+
+# when building, don't use the install RPATH already
+# (but later on when installing)
+SET(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE) 
+
+SET(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+
+# add the automatically determined parts of the RPATH
+# which point to directories outside the build tree to the install RPATH
+SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+
+
+# the RPATH to be used when installing, but only if it's not a system directory
+LIST(FIND CMAKE_PLATFORM_IMPLICIT_LINK_DIRECTORIES "${CMAKE_INSTALL_PREFIX}/lib" isSystemDir)
+IF("${isSystemDir}" STREQUAL "-1")
+   SET(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+ENDIF("${isSystemDir}" STREQUAL "-1")
+
+
 include_directories (${FOREXCONNECT_DIR}/include
                      ${SAMPLE_TOOLS_DIR}/include
                     )   
 
-link_directories (${FOREXCONNECT_DIR}/lib
-                  ${SAMPLE_TOOLS_DIR}/lib)
+link_directories (/usr/local/lib)
 
 set (HEADERS 
     source/stdafx.h
     source/CommonSources.h
-    source/LoginParams.h
     source/ResponseListener.h
-    source/SampleParams.h
     source/SessionStatusListener.h
+    source/LoginParams.h
     source/k.h
+    source/MarketDataAccumulator.h
+    source/Helpers.h
+    source/Wrapper.h
     )
      
 set (SOURCES
-    source/main.cpp
     source/CommonSources.cpp
-    source/LoginParams.cpp
     source/ResponseListener.cpp
-    source/SampleParams.cpp
     source/SessionStatusListener.cpp
+    source/LoginParams.cpp
+    source/MarketDataAccumulator.cpp
+    source/Helpers.cpp
+    source/Wrapper.cpp
     ) 
 
-if (NOT CMAKE_CROSSCOMPILING)
-    add_executable (${PROJECT} ${HEADERS} ${SOURCES})
-else ()
-    add_library (${PROJECT} SHARED ${HEADERS} ${SOURCES})
-endif ()
+add_library (${PROJECT} SHARED ${HEADERS} ${SOURCES})
 
 if (${CMAKE_SYSTEM} MATCHES "Linux")
     target_link_libraries (${PROJECT} ForexConnect sample_tools)
 elseif (${CMAKE_SYSTEM} MATCHES "Darwin")
     target_link_libraries (${PROJECT} ForexConnect sample_tools)
+    # target_link_libraries (${PROJECT} ForexConnect)
 endif ()
 
 # Post - build event to create symlinks for shared objects
@@ -91,14 +110,18 @@ add_custom_command (TARGET ${PROJECT}
 
 if (${CMAKE_SYSTEM} MATCHES "Linux")
     set_target_properties (${PROJECT} PROPERTIES
-          COMPILE_FLAGS "-m32"
-          LINK_FLAGS -Wl,-rpath,.
+          COMPILE_FLAGS "-m32 -fPIC"
+          LINK_FLAGS "-shared -Wl,-rpath,."
+          PREFIX "lib"
     )
 elseif (${CMAKE_SYSTEM} MATCHES "Darwin")
     set_target_properties (${PROJECT} PROPERTIES
           BUILD_WITH_INSTALL_RPATH 1
           INSTALL_NAME_DIR "@rpath"
           COMPILE_FLAGS "-m32"
-          LINK_FLAGS "-m32 -Wl,-rpath,@loader_path,-rpath,./"
+          # LINK_FLAGS "-m32 -bundle -undefined dynamic_lookup -Wl,-rpath,@loader_path,-rpath,./"
+          LINK_FLAGS "-m32 -undefined dynamic_lookup -Wl,-rpath,@loader_path,-rpath,./"
+          PREFIX "lib"
+          SUFFIX ".so"
     )
 endif ()

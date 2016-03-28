@@ -4,7 +4,7 @@ CMakeScripts
 Makefile
 cmake_install.cmake
 install_manifest.txt
-build
+bin
 *.xcodeproj
 *.build
 *.DS_Store

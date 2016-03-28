@@ -1,0 +1,1 @@
+#include "MarketDataAccumulator.h"
