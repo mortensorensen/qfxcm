@@ -7,7 +7,7 @@
 #include "LoginParams.h"
 #include "SampleParams.h"
 #include "CommonSources.h"
-#include "MarketDataAccumulator.h"
+#include "MarketDataSnapshotAccumulator.h"
 
 #ifdef __cplusplus
 class Wrapper

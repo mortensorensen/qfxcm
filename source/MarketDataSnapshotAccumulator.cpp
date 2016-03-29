@@ -1,20 +1,20 @@
-#include "MarketDataAccumulator.h"
+#include "MarketDataSnapshotAccumulator.h"
 
-MarketDataAccumulator::MarketDataAccumulator()
+MarketDataSnapshotAccumulator::MarketDataSnapshotAccumulator()
 {
 }
 
-MarketDataAccumulator::~MarketDataAccumulator()
+MarketDataSnapshotAccumulator::~MarketDataSnapshotAccumulator()
 {
 }
 
 
-void MarketDataAccumulator::addReader(O2G2Ptr<IO2GMarketDataSnapshotResponseReader> reader)
+void MarketDataSnapshotAccumulator::addReader(O2G2Ptr<IO2GMarketDataSnapshotResponseReader> reader)
 {
     mReaders.push_back(reader);
 }
 
-const K MarketDataAccumulator::getTable()
+const K MarketDataSnapshotAccumulator::getTable()
 {
     P(mReaders.size() == 0, 0);
     
@@ -24,7 +24,7 @@ const K MarketDataAccumulator::getTable()
         R getTickTable();
 }
 
-const J MarketDataAccumulator::totalSize()
+const J MarketDataSnapshotAccumulator::totalSize()
 {
     J N = 0;
     for (auto it = mReaders.begin(), end = mReaders.end(); it != end; ++it)
@@ -32,7 +32,7 @@ const J MarketDataAccumulator::totalSize()
     R N;
 }
 
-const K MarketDataAccumulator::getTickTable()
+const K MarketDataSnapshotAccumulator::getTickTable()
 {
     K cols = ktn(KS, 3);
     kS(cols)[0] = ss((S) "DateTime");
@@ -50,7 +50,7 @@ const K MarketDataAccumulator::getTickTable()
     {
         for (J j = 0, jj = (*reader)->size(); j < jj; i++, j++)
         {
-            kF(dateTime)[i] = (*reader)->getDate(j) - 36526;
+            kF(dateTime)[i] = zo((*reader)->getDate(j));
             kF(bid)[i] = (*reader)->getBid(j);
             kF(ask)[i] = (*reader)->getAsk(j);
         }
@@ -59,7 +59,7 @@ const K MarketDataAccumulator::getTickTable()
     R xT(xD(cols, knk(3, dateTime, bid, ask)));
 }
 
-const K MarketDataAccumulator::getBarTable()
+const K MarketDataSnapshotAccumulator::getBarTable()
 {
     K cols = ktn(KS, 10);
     kS(cols)[0] = ss((S) "DateTime");
@@ -91,7 +91,7 @@ const K MarketDataAccumulator::getBarTable()
     {
         for (J j = 0, jj = (*reader)->size(); j < jj; i++, j++)
         {
-            kF(dateTime)[i] = (*reader)->getDate(j) - 36526;
+            kF(dateTime)[i] = zo((*reader)->getDate(j));
             kF(bidOpen)[i] = (*reader)->getBidOpen(j);
             kF(bidHigh)[i] = (*reader)->getBidHigh(j);
             kF(bidLow)[i] = (*reader)->getBidLow(j);

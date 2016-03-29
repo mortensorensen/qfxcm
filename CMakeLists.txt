@@ -76,7 +76,7 @@ set (HEADERS
     source/k.h
     source/Helpers.h
     source/Wrapper.h
-    source/MarketDataAccumulator.h
+    source/MarketDataSnapshotAccumulator.h
     )
      
 set (SOURCES
@@ -84,9 +84,8 @@ set (SOURCES
     source/ResponseListener.cpp
     source/SessionStatusListener.cpp
     source/LoginParams.cpp
-    source/Helpers.cpp
     source/Wrapper.cpp
-    source/MarketDataAccumulator.cpp
+    source/MarketDataSnapshotAccumulator.cpp
     ) 
 
 add_library (${PROJECT} SHARED ${HEADERS} ${SOURCES})

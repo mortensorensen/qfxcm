@@ -107,7 +107,7 @@ extern "C" K gethistprices(K kInstrument, K kTimeframe, K kDtFrom, K kDtTo) {
     KTimeToOleTime(kDtTo, &dtFirst);
     KTimeToOleTime(kDtFrom, &dtFrom);
     
-    auto accumulator = std::make_unique<MarketDataAccumulator>();
+    auto accumulator = std::make_unique<MarketDataSnapshotAccumulator>();
 
     // There is a limit for retured candles amount
     do {

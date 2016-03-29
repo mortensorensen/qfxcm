@@ -1,16 +1,16 @@
-#ifndef MarketDataAccumulator_h
-#define MarketDataAccumulator_h
+#ifndef MarketDataSnapshotAccumulator_h
+#define MarketDataSnapshotAccumulator_h
 
 #include "stdafx.h"
 #include "ResponseListener.h"
 #include "CommonSources.h"
-//#include "Helpers.h"
+#include "Helpers.h"
 
-class MarketDataAccumulator
+class MarketDataSnapshotAccumulator
 {
 public:
-    MarketDataAccumulator();
-    virtual ~MarketDataAccumulator();
+    MarketDataSnapshotAccumulator();
+    virtual ~MarketDataSnapshotAccumulator();
     
     void addReader(O2G2Ptr<IO2GMarketDataSnapshotResponseReader> reader);
     const K getTable();
