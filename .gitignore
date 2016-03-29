@@ -8,3 +8,4 @@ bin
 *.xcodeproj
 *.build
 *.DS_Store
+run.sh

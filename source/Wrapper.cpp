@@ -41,6 +41,7 @@ ResponseListener *responseListener;
 // }
 
 extern "C" K connect(K host, K user, K password, K connection) {
+    Q(host->t != -11 || user->t != -11 || password->t != -11 || connection->t != -11, "type");
     Q(sessionListener && sessionListener->isConnected(), "session");
     Q(strcasecmp(connection->s, "Real") != 0 &&
       strcasecmp(connection->s, "Demo") != 0,
@@ -52,14 +53,11 @@ extern "C" K connect(K host, K user, K password, K connection) {
     
     sessionListener->reset();
     session->login(user->s, password->s, host->s, connection->s);
-    sessionListener->waitEvents();
+
+    responseListener = new ResponseListener(session);
+    session->subscribeResponse(responseListener);
     
-    if (sessionListener->isConnected()) {
-        responseListener = new ResponseListener(session);
-        session->subscribeResponse(responseListener);
-    }
-    
-    R kb(sessionListener->isConnected());
+    R 0;
 }
 
 extern "C" K disconnect(K ignore) {
@@ -80,12 +78,6 @@ extern "C" K disconnect(K ignore) {
     R 0;
 }
 
-static bool KTimeToOleTime(K t, F *mDateTo) {
-    struct tm tmBuf = *lt(t->i);
-    CO2GDateUtils::CTimeToOleTime(&tmBuf, mDateTo);
-    R kb(1);
-}
-
 extern "C" K isconnected(K ignore) {
     R kb(sessionListener && sessionListener->isConnected());
 }
@@ -93,22 +85,23 @@ extern "C" K isconnected(K ignore) {
 extern "C" K gethistprices(K kInstrument, K kTimeframe, K kDtFrom, K kDtTo) {
     Q(!session || !sessionListener, "session");
     
-    O2G2Ptr<IO2GRequestFactory> factory = session->getRequestFactory();
+    auto factory = session->getRequestFactory();
     Q(!factory, "factory");
     
     // Find timeframe by identifer
-    O2G2Ptr<IO2GTimeframeCollection> timeframeCollection = factory->getTimeFrameCollection();
-    O2G2Ptr<IO2GTimeframe> timeframe = timeframeCollection->get(kTimeframe->s);
+    auto timeframeCollection = factory->getTimeFrameCollection();
+    auto timeframe = timeframeCollection->get(kTimeframe->s);
     Q(!timeframe, "timeframe");
     
-    O2G2Ptr<IO2GRequest> request =
+    auto request =
         factory->createMarketDataSnapshotRequestInstrument(kInstrument->s, timeframe, timeframe->getQueryDepth());
     DATE dtFirst, dtFrom;
-    KTimeToOleTime(kDtTo, &dtFirst);
-    KTimeToOleTime(kDtFrom, &dtFrom);
+    oz(kDtTo, &dtFirst);
+    oz(kDtFrom, &dtFrom);
     
+    double tolerance = 0.0001;
     auto accumulator = std::make_unique<MarketDataSnapshotAccumulator>();
-
+    
     // There is a limit for retured candles amount
     do {
         factory->fillMarketDataSnapshotRequestTime(request, dtFrom, dtFirst, false);
@@ -117,33 +110,30 @@ extern "C" K gethistprices(K kInstrument, K kTimeframe, K kDtFrom, K kDtTo) {
         Q(!responseListener->waitEvents(), "timeout");
         
         // shift "to" bound to oldest datetime of returned data
-        O2G2Ptr<IO2GResponse> response = responseListener->getResponse();
+        auto response = responseListener->getResponse();
         
         if (response && (response->getType() == MarketDataSnapshot)) {
-            O2G2Ptr<IO2GResponseReaderFactory> readerFactory = session->getResponseReaderFactory();
+            auto readerFactory = session->getResponseReaderFactory();
             
             O("RequestID='%s' completed\n", response->getRequestID());
             
             if (readerFactory) {
-                O2G2Ptr<IO2GMarketDataSnapshotResponseReader> reader =
+                auto reader =
                     readerFactory->createMarketDataSnapshotReader(response);
             
                 accumulator->addReader(reader);
                 
-                if (reader->size() > 0) {
-                    if (std::abs(dtFirst - reader->getDate(0)) > 0.0001)
-                        dtFirst = reader->getDate(0); // earliest datetime of returned data
-                    else
-                        break;
-                } else {
-                    O("0 rows received\n");
+                // check data is valid
+                Q(reader->size() == 0, "0 rows received");
+                if (std::abs(dtFirst - reader->getDate(0)) <= tolerance)
                     break;
-                }
+                
+                dtFirst = reader->getDate(0); // earliest datetime of returned data
             }
         } else {
             break;
         }
-    } while (dtFirst - dtFrom > 0.0001);
+    } while (dtFirst - dtFrom > tolerance);
     
     R accumulator->getTable();
 }

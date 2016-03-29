@@ -1,19 +1,6 @@
 #include "stdafx.h"
 #include "SessionStatusListener.h"
-#include "k.h"
-
-K consume_event2(const std::string &fun, K x) {
-    K ret = k(0, (S)fun.c_str(), x, (K)0);
-    
-    if (!ret)
-        O("Broken socket\n");
-    else if (ret->t == -128)
-        O("Error calling %s: %s\n", fun.c_str(), ret->s);
-    
-    r0(ret);
-    R 0;
-}
-
+#include "Helpers.h"
 
 /** Constructor. */
 SessionStatusListener::SessionStatusListener(IO2GSession *session,
@@ -60,7 +47,7 @@ void SessionStatusListener::reset() {
 
 /** Callback called when login has been failed. */
 void SessionStatusListener::onLoginFailed(const char *error) {
-    O("Login error: %s\n", error);
+    consume_event("onloginfailed", kp((S)error));
     mError = true;
 }
 
@@ -68,16 +55,16 @@ void SessionStatusListener::onLoginFailed(const char *error) {
 void SessionStatusListener::onSessionStatusChanged(IO2GSessionStatus::O2GSessionStatus status) {
     switch (status) {
         case IO2GSessionStatus::Disconnected:
-            O("status::disconnected\n");
+            consume_event("ondisconnected", kb(1));
             mConnected = false;
             mDisconnected = true;
             SetEvent(mSessionEvent);
             break;
         case IO2GSessionStatus::Connecting:
-            O("status::connecting\n");
+            consume_event("onconnecting", kb(1));
             break;
         case IO2GSessionStatus::TradingSessionRequested: {
-            O("status::trading session requested\n");
+            consume_event("ontradingsessionrequested", kb(1));
             O2G2Ptr<IO2GSessionDescriptorCollection> descriptors =
                 mSession->getTradingSessionDescriptors();
             bool found = false;
@@ -106,23 +93,23 @@ void SessionStatusListener::onSessionStatusChanged(IO2GSessionStatus::O2GSession
                 mSession->setTradingSession(mSessionID.c_str(), mPin.c_str());
         } break;
         case IO2GSessionStatus::Connected:
-            O("status::connected\n");
-            consume_event2("onconnect", (K)0);
+            consume_event("onconnected", kb(1));
             mConnected = true;
             mDisconnected = false;
             SetEvent(mSessionEvent);
             break;
         case IO2GSessionStatus::Reconnecting:
-            O("status::reconnecting\n");
+            consume_event("onreconnecting", kb(1));
             break;
         case IO2GSessionStatus::Disconnecting:
-            O("status::disconnecting\n");
+            consume_event("ondisconnecting", kb(1));
             break;
         case IO2GSessionStatus::SessionLost:
-            O("status::connection lost\n");
+            consume_event("onsessionlost", kb(1));
             break;
         default:
             break;
+
     }
 }
 
