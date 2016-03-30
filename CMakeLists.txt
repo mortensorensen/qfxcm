@@ -18,18 +18,16 @@ set (SHAREDSUFFIX "so")
 
 set (CMAKE_OSX_ARCHITECTURES i386)
 
-set (SAMPLE_TOOLS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/ForexConnectAPI/samples/cpp/sample_tools")
-set (FOREXCONNECT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/ForexConnectAPI")
+set (FOREXCONNECT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../ForexConnectAPI-1.4.1-Darwin-i386")
+set (SAMPLE_TOOLS_DIR "${FOREXCONNECT_DIR}/samples/cpp/sample_tools")
 
 set (LIBRARY_OUTPUT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/bin)
 
 set (CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS} ${ARCHFLAGS}")
-set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS} ${ARCHFLAGS}")
-
 set (CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS} ${ARCHFLAGS}")
-set (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} ${ARCHFLAGS}")
-
 set (CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS} ${ARCHFLAGS}")
+set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS} ${ARCHFLAGS}")
+set (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} ${ARCHFLAGS}")
 set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS} ${ARCHFLAGS}")
 
 # Default build mode
@@ -39,27 +37,6 @@ if (NOT CMAKE_BUILD_TYPE)
          FORCE
     )
 endif (NOT CMAKE_BUILD_TYPE)
-
-# use, i.e. don't skip the full RPATH for the build tree
-SET(CMAKE_SKIP_BUILD_RPATH FALSE)
-
-# when building, don't use the install RPATH already
-# (but later on when installing)
-SET(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE) 
-
-SET(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
-
-# add the automatically determined parts of the RPATH
-# which point to directories outside the build tree to the install RPATH
-SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
-
-
-# the RPATH to be used when installing, but only if it's not a system directory
-LIST(FIND CMAKE_PLATFORM_IMPLICIT_LINK_DIRECTORIES "${CMAKE_INSTALL_PREFIX}/lib" isSystemDir)
-IF("${isSystemDir}" STREQUAL "-1")
-   SET(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
-ENDIF("${isSystemDir}" STREQUAL "-1")
-
 
 include_directories (${FOREXCONNECT_DIR}/include
                      ${SAMPLE_TOOLS_DIR}/include
@@ -90,12 +67,7 @@ set (SOURCES
 
 add_library (${PROJECT} SHARED ${HEADERS} ${SOURCES})
 
-if (${CMAKE_SYSTEM} MATCHES "Linux")
-    target_link_libraries (${PROJECT} ForexConnect sample_tools)
-elseif (${CMAKE_SYSTEM} MATCHES "Darwin")
-    target_link_libraries (${PROJECT} ForexConnect sample_tools)
-    # target_link_libraries (${PROJECT} ForexConnect)
-endif ()
+target_link_libraries (${PROJECT} ForexConnect sample_tools)
 
 # Post - build event to create symlinks for shared objects
 add_custom_command (TARGET ${PROJECT}
@@ -107,13 +79,16 @@ add_custom_command (TARGET ${PROJECT}
     VERBATIM
 )
 
+set_target_properties (${PROJECT} PROPERTIES
+    PREFIX "lib"
+    CXX_STANDARD 14
+    CXX_STANDARD_REQUIRED ON
+  )
+
 if (${CMAKE_SYSTEM} MATCHES "Linux")
     set_target_properties (${PROJECT} PROPERTIES
           COMPILE_FLAGS "-m32 -fPIC"
-          LINK_FLAGS "-shared -Wl,-rpath,."
-          PREFIX "lib"
-          CXX_STANDARD 14
-          CXX_STANDARD_REQUIRED ON
+          LINK_FLAGS "-shared -Wl,-rpath,."      
     )
 elseif (${CMAKE_SYSTEM} MATCHES "Darwin")
     set_target_properties (${PROJECT} PROPERTIES
@@ -122,9 +97,6 @@ elseif (${CMAKE_SYSTEM} MATCHES "Darwin")
           COMPILE_FLAGS "-m32"
           # LINK_FLAGS "-m32 -bundle -undefined dynamic_lookup -Wl,-rpath,@loader_path,-rpath,./"
           LINK_FLAGS "-m32 -undefined dynamic_lookup -Wl,-rpath,@loader_path,-rpath,./"
-          PREFIX "lib"
           SUFFIX ".so"
-          CXX_STANDARD 14
-          CXX_STANDARD_REQUIRED ON
     )
 endif ()
