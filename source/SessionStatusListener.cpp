@@ -47,7 +47,7 @@ void SessionStatusListener::reset() {
 
 /** Callback called when login has been failed. */
 void SessionStatusListener::onLoginFailed(const char *error) {
-    consume_event("onloginfailed", kp((S)error));
+    consumeEvent("onloginfailed", kp((S)error));
     mError = true;
 }
 
@@ -55,16 +55,16 @@ void SessionStatusListener::onLoginFailed(const char *error) {
 void SessionStatusListener::onSessionStatusChanged(IO2GSessionStatus::O2GSessionStatus status) {
     switch (status) {
         case IO2GSessionStatus::Disconnected:
-            consume_event("ondisconnected", kb(1));
+            consumeEvent("ondisconnected", kb(1));
             mConnected = false;
             mDisconnected = true;
             SetEvent(mSessionEvent);
             break;
         case IO2GSessionStatus::Connecting:
-            consume_event("onconnecting", kb(1));
+            consumeEvent("onconnecting", kb(1));
             break;
         case IO2GSessionStatus::TradingSessionRequested: {
-            consume_event("ontradingsessionrequested", kb(1));
+            consumeEvent("ontradingsessionrequested", kb(1));
             O2G2Ptr<IO2GSessionDescriptorCollection> descriptors =
                 mSession->getTradingSessionDescriptors();
             bool found = false;
@@ -93,19 +93,19 @@ void SessionStatusListener::onSessionStatusChanged(IO2GSessionStatus::O2GSession
                 mSession->setTradingSession(mSessionID.c_str(), mPin.c_str());
         } break;
         case IO2GSessionStatus::Connected:
-            consume_event("onconnected", kb(1));
+            consumeEvent("onconnected", kb(1));
             mConnected = true;
             mDisconnected = false;
             SetEvent(mSessionEvent);
             break;
         case IO2GSessionStatus::Reconnecting:
-            consume_event("onreconnecting", kb(1));
+            consumeEvent("onreconnecting", kb(1));
             break;
         case IO2GSessionStatus::Disconnecting:
-            consume_event("ondisconnecting", kb(1));
+            consumeEvent("ondisconnecting", kb(1));
             break;
         case IO2GSessionStatus::SessionLost:
-            consume_event("onsessionlost", kb(1));
+            consumeEvent("onsessionlost", kb(1));
             break;
         default:
             break;

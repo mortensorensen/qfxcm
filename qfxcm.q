@@ -14,7 +14,9 @@ connect:so 2:(`connect;4)
 disconnect:so 2:(`disconnect;1)
 isconnected:so 2:(`isconnected;1)
 
+/ !!! sync methods
 gethistprices:so 2:(`gethistprices;4)
+reqmktdata:so 2:(`requestMarketData;1)
 
 out:{-1(string .z.Z)," ",x;}
 
@@ -28,6 +30,8 @@ onsessionlost:{out"status::session lost"}
 ontradingsessionrequested:{out"status::trading session requested"}
 onloginfailed:{out"status::the specified sub session id was not found"}
 
+onoffer:{out"offer received"}
+onlevel2data:{out"level 2 received"}
 
 // test
 instrument:`$"EUR/USD"

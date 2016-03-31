@@ -67,7 +67,7 @@ inline bool oz(K t, F *mDateTo) {
     R kb(1);
 }
 
-inline K consume_event(const std::string &fun, K x) {
+inline K consumeEvent(const std::string &fun, K x) {
     K ret = k(0, (S)fun.c_str(), x, (K)0);
     
     if (!ret)

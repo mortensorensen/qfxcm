@@ -50,6 +50,7 @@ set (HEADERS
     source/ResponseListener.h
     source/SessionStatusListener.h
     source/LoginParams.h
+    source/Offer.h
     source/k.h
     source/Helpers.h
     source/Wrapper.h
@@ -61,6 +62,7 @@ set (SOURCES
     source/ResponseListener.cpp
     source/SessionStatusListener.cpp
     source/LoginParams.cpp
+    source/Offer.cpp
     source/Wrapper.cpp
     source/MarketDataSnapshotAccumulator.cpp
     ) 

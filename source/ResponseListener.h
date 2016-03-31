@@ -2,6 +2,9 @@
 
 /** Response listener class. */
 
+class Offer;
+class OfferCollection;
+
 class ResponseListener : public IO2GResponseListener
 {
  public:
@@ -16,6 +19,8 @@ class ResponseListener : public IO2GResponseListener
     /** Set request ID. */
     void setRequestID(const char *sRequestID);
 
+    void setInstrument(const char *sInstrument);
+    
     /** Wait for request execution or error. */
     bool waitEvents();
 
@@ -33,12 +38,16 @@ class ResponseListener : public IO2GResponseListener
     /** Request update data received data handler. */
     virtual void onTablesUpdates(IO2GResponse *data);
 
+    void onOffers(IO2GSession *session, IO2GResponse *response, const char *sInstrument);
+    void onLevel2MarketData(IO2GSession *session, IO2GResponse *response, const char *sInstrument);
+    
  private:
     long mRefCount;
     /** Session object. */
     IO2GSession *mSession;
     /** Request we are waiting for. */
     std::string mRequestID;
+    std::string mInstrument;
     /** Response Event handle. */
     HANDLE mResponseEvent;
 
@@ -47,6 +56,8 @@ class ResponseListener : public IO2GResponseListener
 
     /** State of last request. */
     IO2GResponse *mResponse;
+    
+    OfferCollection *mOffers;
 
  protected:
     /** Destructor. */

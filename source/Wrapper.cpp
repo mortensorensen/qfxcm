@@ -51,7 +51,7 @@ extern "C" K connect(K host, K user, K password, K connection) {
     sessionListener = new SessionStatusListener(session, false, "", "");
     session->subscribeSessionStatus(sessionListener);
     
-    sessionListener->reset();
+//    sessionListener->reset();
     session->login(user->s, password->s, host->s, connection->s);
 
     responseListener = new ResponseListener(session);
@@ -135,5 +135,48 @@ extern "C" K gethistprices(K kInstrument, K kTimeframe, K kDtFrom, K kDtTo) {
         }
     } while (dtFirst - dtFrom > tolerance);
     
-    R accumulator->getTable();
+    accumulator->getTable();
+    
+    R 0;
+}
+
+extern "C" K requestMarketData(K kInstrument)
+{
+    Q(kInstrument->t != -11, "type");
+    responseListener->setInstrument(kInstrument->s);
+    
+    auto loginRules = session->getLoginRules();
+    Q(!loginRules, "loginrules");
+
+    O2G2Ptr<IO2GResponse> response = NULL;
+    if (loginRules->isTableLoadedByDefault(Offers)) {
+        response = loginRules->getTableRefreshResponse(Offers);
+        O("table loaded by default\n");
+        if (response) {
+            O("response..\n");
+            responseListener->onOffers(session, response, "");
+        }
+        
+    } else {
+        auto requestFactory = session->getRequestFactory();
+        if (requestFactory) {
+            O("entering b\n");
+            auto offersRequest = requestFactory->createRefreshTableRequest(Offers);
+            responseListener->setRequestID(offersRequest->getRequestID());
+            session->sendRequest(offersRequest);
+            
+            Q(!responseListener->waitEvents(), "timout");
+            response = responseListener->getResponse();
+            if (response) {
+                responseListener->onOffers(session, response, "");
+                O("c\n");
+            } else {
+                O("d\n");
+            }
+        } else {
+            O("no req factory\n");
+        }
+    }
+    
+    R 0;
 }
