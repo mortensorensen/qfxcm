@@ -5,40 +5,19 @@
  *
  */
 
-#include "Wrapper.h"
+#include <config.h>
+
+#include "stdafx.h"
 #include "Helpers.h"
+#include "ResponseListener.h"
+#include "SessionStatusListener.h"
+#include "CommonSources.h"
+#include "Offer.h"
+#include "MarketDataSnapshotAccumulator.h"
 
 IO2GSession *session;
 SessionStatusListener *sessionListener;
 ResponseListener *responseListener;
-
-// http://stackoverflow.com/questions/14917952/can-i-use-shared-library-created-in-c-in-a-c-program
-//
-// K Wrapper::connect(K host, K user, K password)
-// {
-//    session = CO2GTransport::createSession();
-//    sessionListener = new SessionStatusListener(session, false, "", "");
-//    session->subscribeSessionStatus(sessionListener);
-//
-////    return (K)login(session, sessionListener, "");
-//    return 0;
-// }
-//
-// wrapper *wrapper_create() {
-//    wrapper *w = TO_C(new Wrapper);
-//    return w;
-// }
-//
-// wrapper *wrapper_create_init()
-// {
-//    wrapper *w = TO_C(new Wrapper);
-//    return w;
-// }
-//
-// void wrapper_destroy(wrapper *w)
-// {
-//    delete TO_CPP(w);
-// }
 
 extern "C" K connect(K host, K user, K password, K connection) {
     Q(host->t != -11 || user->t != -11 || password->t != -11 || connection->t != -11, "type");
@@ -72,9 +51,10 @@ extern "C" K disconnect(K ignore) {
     
     session->unsubscribeSessionStatus(sessionListener);
     sessionListener->release();
+
     session->release();
+    session = NULL;
     
-//    delete session;
     R 0;
 }
 
@@ -180,3 +160,66 @@ extern "C" K requestMarketData(K kInstrument)
     
     R 0;
 }
+
+extern "C" K createOrder(K kAccountId, K kOfferId, K kAmount, K kCustomId)
+{
+    Q(kAccountId->t != -11 || kOfferId->t != -7 || kAmount->t != -7 || kCustomId->t != -11, "type");
+    Q(kAmount->j == 0, "amount");
+    
+    auto factory = session->getRequestFactory();
+    
+    auto valuemap = factory->createValueMap();
+    valuemap->setString(Command, O2G2::Commands::CreateOrder);
+    valuemap->setString(OrderType, O2G2::Orders::TrueMarketOpen);
+    valuemap->setString(AccountID, kAccountId->s);
+    valuemap->setString(OfferID, kOfferId->s);  // The ID of the instrument
+    valuemap->setString(BuySell, kAmount->j > 0 ? O2G2::Buy : O2G2::Sell);
+    valuemap->setInt(Amount, kAmount->j);
+    valuemap->setString(CustomID, kCustomId->s); // The custom identifier of the order
+    
+    auto request = factory->createOrderRequest(valuemap);
+    Q(!request, factory->getLastError());
+    session->sendRequest(request);
+    
+    R 0;
+}
+
+extern "C" K createOCOOrder(K kAccountId, K kOfferId, K kAmount, K kBuyRate, K kSellRate, K kCustomId)
+{
+    Q(kAccountId->t != -11 || kOfferId->t != -7 || kAmount->t != -7 ||
+      kBuyRate->t != -9 || kSellRate->t != -9 || kCustomId->t != -11, "type");
+    
+    auto factory = session->getRequestFactory();
+    auto mainValueMap = factory->createValueMap();
+    mainValueMap->setString(Command, kCustomId->s);
+    
+    auto child1 = factory->createValueMap();
+    child1->setString(Command, kCustomId->s);
+    child1->setString(OrderType, "SE");
+    child1->setString(OfferID, kOfferId->s);
+    child1->setDouble(Rate, kBuyRate->f);
+    child1->setString(AccountID, kAccountId->s);
+    child1->setString(BuySell, "B");
+    child1->setInt(Amount, kAmount->j);
+    mainValueMap->appendChild(child1);
+    
+    auto child2 = child1->clone();  // to reduce typing
+    child2->setDouble(Rate, kSellRate->f);
+    child2->setString(BuySell, "S");
+    mainValueMap->appendChild(child2);
+    
+    auto orderRequest = factory->createOrderRequest(mainValueMap);
+    Q(!orderRequest, factory->getLastError());
+    session->sendRequest(orderRequest);
+    
+    R 0;
+}
+
+extern "C" K LoadLibrary(K x)
+{
+    O("\n");
+    O("release » %-5s\n", BUILD_PROJECT_VERSION);
+    O("\n");
+}
+
+

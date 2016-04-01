@@ -7,6 +7,8 @@ user:first `$args[`user]
 pass:first `$args[`pass]
 connection:`Demo
 
+out:{-1(string .z.Z)," ",x;}
+
 // Functions
 so:`$"bin/Debug/libqfxcm"
 /so:`$"bin/libqfxcm"
@@ -18,7 +20,8 @@ isconnected:so 2:(`isconnected;1)
 gethistprices:so 2:(`gethistprices;4)
 reqmktdata:so 2:(`requestMarketData;1)
 
-out:{-1(string .z.Z)," ",x;}
+createorder:so 2:(`createOrder;4)
+createocoorder:so 2:(`createOCOORder;6)
 
 // Callbacks
 onconnecting:{out"status::connecting"}

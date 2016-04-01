@@ -5,6 +5,7 @@ Makefile
 cmake_install.cmake
 install_manifest.txt
 bin
+build
 *.xcodeproj
 *.build
 *.DS_Store
