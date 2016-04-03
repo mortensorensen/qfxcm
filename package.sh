@@ -9,9 +9,9 @@ cd ${TMP}
 
 cmake ${DIR}
 make
-# make build_package
+make build_package
 
 cd ->/dev/null
 
-#echo "[cleaning up the build from ${TMP}]"
-#rm -rf ${TMP}
+echo "[cleaning up the build from ${TMP}]"
+rm -rf ${TMP}

@@ -218,8 +218,36 @@ extern "C" K createOCOOrder(K kAccountId, K kOfferId, K kAmount, K kBuyRate, K k
 extern "C" K LoadLibrary(K x)
 {
     O("\n");
-    O("release » %-5s\n", BUILD_PROJECT_VERSION);
+    O("%s:\n",                          PROGRAM_NAME);
+    O("release » %-5s\n",               BUILD_PROJECT_VERSION);
+    O("os » %-5s\n",                    BUILD_OPERATING_SYSTEM);
+    O("arch » %-5s\n",                  BUILD_PROCESSOR);
+    O("git commit » %-5s\n",            BUILD_GIT_SHA1);
+    O("git commit datetime » %-5s\n",   BUILD_GIT_DATE);
+    O("kdb compatibility » %s.x\n",     BUILD_KX_VER);
+    O("compiler flags » %-5s\n",        BUILD_COMPILER_FLAGS);
     O("\n");
+    
+    K keys = ktn(KS, 7);
+    K vals = ktn(0, 7);
+    
+    kS(keys)[0] = ss((S) "connect");
+    kS(keys)[1] = ss((S) "disconnect");
+    kS(keys)[2] = ss((S) "isconnected");
+    kS(keys)[3] = ss((S) "gethistprices");
+    kS(keys)[4] = ss((S) "reqmktdata");
+    kS(keys)[5] = ss((S) "createorder");
+    kS(keys)[6] = ss((S) "createocoorder");
+    
+    kK(vals)[0] = dl((void *) connect, 4);
+    kK(vals)[1] = dl((void *) disconnect, 1);
+    kK(vals)[2] = dl((void *) isconnected, 1);
+    kK(vals)[3] = dl((void *) gethistprices, 4);
+    kK(vals)[4] = dl((void *) requestMarketData, 1);
+    kK(vals)[5] = dl((void *) createOrder, 4);
+    kK(vals)[6] = dl((void *) createOCOOrder, 6);
+    
+    R xD(keys, vals);
 }
 
 
