@@ -22,6 +22,7 @@ private:
     IO2GSession *mSession;
     /** Event handle. */
     HANDLE mSessionEvent;
+
 protected:
     /** Destructor. */
     ~SessionStatusListener();

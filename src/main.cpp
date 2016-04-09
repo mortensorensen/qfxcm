@@ -5,21 +5,57 @@
  *
  */
 
-#include <config.h>
-
-#include "stdafx.h"
-#include "Helpers.h"
-#include "ResponseListener.h"
-#include "SessionStatusListener.h"
-#include "CommonSources.h"
-#include "Offer.h"
-#include "MarketDataSnapshotAccumulator.h"
+#include "ForexConnectClient.h"
 
 IO2GSession *session;
 SessionStatusListener *sessionListener;
 ResponseListener *responseListener;
 
-extern "C" K connect(K host, K user, K password, K connection) {
+
+namespace
+{
+    // TODO: Type conversions
+    template <class T>
+    K vector_to_k_list(const std::vector<T> &vector) {
+        typename std::vector<T>::const_iterator iter;
+        K list;
+        for (iter = vector.begin(); iter != vector.end(); ++iter) {
+            ja(&list, *iter);
+        }
+        R list;
+    }
+    
+    template <class Key, class Val>
+    K map_to_k_dict(const std::map<Key, Val> &map) {
+        typename std::map<Key, Val>::const_iterator iter;
+        K keys, vals;
+        for (iter = map.begin(); iter != map.end(); ++iter) {
+            ja(&keys, iter->first);
+            ja(&vals, iter->second);
+        }
+        R xD(keys, vals);
+    }
+}
+
+LoginParams::LoginParams()
+{
+}
+
+LoginParams::LoginParams(const std::string& login,
+                         const std::string& password,
+                         const std::string& connection,
+                         const std::string& url)
+    : mLogin(login),
+    mPassword(password),
+    mConnection(connection),
+    mUrl(url)
+{
+}
+
+
+
+extern "C"
+K connect(K host, K user, K password, K connection) {
     Q(host->t != -11 || user->t != -11 || password->t != -11 || connection->t != -11, "type");
     Q(sessionListener && sessionListener->isConnected(), "session");
     Q(strcasecmp(connection->s, "Real") != 0 &&
@@ -39,7 +75,8 @@ extern "C" K connect(K host, K user, K password, K connection) {
     R 0;
 }
 
-extern "C" K disconnect(K ignore) {
+extern "C"
+K disconnect(K ignore) {
     Q(!session || !sessionListener, "session");
     
     session->unsubscribeResponse(responseListener);
@@ -49,25 +86,27 @@ extern "C" K disconnect(K ignore) {
     session->logout();
     sessionListener->waitEvents();
     
-    session->unsubscribeSessionStatus(sessionListener);
-    sessionListener->release();
+//    session->unsubscribeSessionStatus(sessionListener);
+//    sessionListener->release();
 
-    session->release();
+//    session->release();
     session = NULL;
     
     R 0;
 }
 
-extern "C" K isconnected(K ignore) {
+extern "C"
+K isconnected(K ignore) {
     R kb(sessionListener && sessionListener->isConnected());
 }
 
-extern "C" K gethistprices(K kInstrument, K kTimeframe, K kDtFrom, K kDtTo) {
+extern "C"
+K gethistprices(K kInstrument, K kTimeframe, K kBegin, K kEnd) {
     Q(!session || !sessionListener, "session");
     
     auto factory = session->getRequestFactory();
     Q(!factory, "factory");
-    
+
     // Find timeframe by identifer
     auto timeframeCollection = factory->getTimeFrameCollection();
     auto timeframe = timeframeCollection->get(kTimeframe->s);
@@ -75,16 +114,17 @@ extern "C" K gethistprices(K kInstrument, K kTimeframe, K kDtFrom, K kDtTo) {
     
     auto request =
         factory->createMarketDataSnapshotRequestInstrument(kInstrument->s, timeframe, timeframe->getQueryDepth());
-    DATE dtFirst, dtFrom;
-    oz(kDtTo, &dtFirst);
-    oz(kDtFrom, &dtFrom);
+    DATE dtFrom, dtTo;
+    oz(kBegin, &dtFrom);
+    oz(kEnd, &dtTo);
     
     double tolerance = 0.0001;
     auto accumulator = std::make_unique<MarketDataSnapshotAccumulator>();
     
-    // There is a limit for retured candles amount
+    // Max 1000 candles per request
+    // Receives the most recent data first
     do {
-        factory->fillMarketDataSnapshotRequestTime(request, dtFrom, dtFirst, false);
+        factory->fillMarketDataSnapshotRequestTime(request, dtFrom, dtTo, false);
         responseListener->setRequestID(request->getRequestID());
         session->sendRequest(request);
         Q(!responseListener->waitEvents(), "timeout");
@@ -105,22 +145,32 @@ extern "C" K gethistprices(K kInstrument, K kTimeframe, K kDtFrom, K kDtTo) {
                 
                 // check data is valid
                 Q(reader->size() == 0, "0 rows received");
-                if (std::abs(dtFirst - reader->getDate(0)) <= tolerance)
+                if (std::abs(dtTo - reader->getDate(0)) <= tolerance)
                     break;
                 
-                dtFirst = reader->getDate(0); // earliest datetime of returned data
+                // BUG: Will return overlapping values sometimes
+//                DateTime                BidOpen BidHigh BidLow  BidClose AskOpen AskHigh AskL..
+//                -----------------------------------------------------------------------------..
+//                2016.03.04T17:00:00.000 1.10097 1.1014  1.09906 1.09982  1.101   1.10144 1.09..
+//                2016.03.04T18:00:00.000 1.09982 1.10014 1.09899 1.09945  1.09985 1.10017 1.09..
+//                2016.03.04T19:00:00.000 1.09945 1.09995 1.09902 1.09977  1.09947 1.09997 1.09..
+//                2016.03.04T19:00:00.000 1.09945 1.09995 1.09902 1.09977  1.09947 1.09997 1.09..
+//                2016.03.04T20:00:00.000 1.09977 1.1002  1.09914 1.10017  1.09978 1.10023 1.09..
+                dtTo = reader->getDate(0); // earliest datetime of returned data
             }
         } else {
             break;
         }
-    } while (dtFirst - dtFrom > tolerance);
+    } while (dtTo - dtFrom > tolerance);
     
-    accumulator->getTable();
+    // TODO: Make async
+//    consumeEvent("histprices", accumulator->getTable());
     
-    R 0;
+    R accumulator->getTable();
 }
 
-extern "C" K requestMarketData(K kInstrument)
+extern "C"
+K requestMarketData(K kInstrument)
 {
     Q(kInstrument->t != -11, "type");
     responseListener->setInstrument(kInstrument->s);
@@ -161,7 +211,8 @@ extern "C" K requestMarketData(K kInstrument)
     R 0;
 }
 
-extern "C" K createOrder(K kAccountId, K kOfferId, K kAmount, K kCustomId)
+extern "C"
+K createOrder(K kAccountId, K kOfferId, K kAmount, K kCustomId)
 {
     Q(kAccountId->t != -11 || kOfferId->t != -7 || kAmount->t != -7 || kCustomId->t != -11, "type");
     Q(kAmount->j == 0, "amount");
@@ -184,7 +235,8 @@ extern "C" K createOrder(K kAccountId, K kOfferId, K kAmount, K kCustomId)
     R 0;
 }
 
-extern "C" K createOCOOrder(K kAccountId, K kOfferId, K kAmount, K kBuyRate, K kSellRate, K kCustomId)
+extern "C"
+K createOCOOrder(K kAccountId, K kOfferId, K kAmount, K kBuyRate, K kSellRate, K kCustomId)
 {
     Q(kAccountId->t != -11 || kOfferId->t != -7 || kAmount->t != -7 ||
       kBuyRate->t != -9 || kSellRate->t != -9 || kCustomId->t != -11, "type");
@@ -215,7 +267,42 @@ extern "C" K createOCOOrder(K kAccountId, K kOfferId, K kAmount, K kBuyRate, K k
     R 0;
 }
 
-extern "C" K LoadLibrary(K x)
+extern "C"
+K getOrder(K x)
+{
+    auto sOrderID = responseListener->getOrderID();
+    if (!sOrderID.empty()) {
+        O("You have successfully created order %s for ...\n", sOrderID.c_str());
+    }
+    R 0;
+}
+
+static void FillFromIterators(K* keys, K* vals)
+{
+    
+}
+
+extern "C"
+K version(K x)
+{
+    K keys = ktn(KS, 4);
+    K vals = ktn(KS, 4);
+    
+    kS(keys)[0] = ss((S) "release");
+    kS(keys)[1] = ss((S) "os");
+    kS(keys)[2] = ss((S) "forexconnect");
+    kS(keys)[3] = ss((S) "kx");
+    
+    kS(vals)[0] = ss((S) BUILD_PROJECT_VERSION);
+    kS(vals)[1] = ss((S) BUILD_OPERATING_SYSTEM);
+    kS(vals)[2] = ss((S) BUILD_FOREXCONNECT_VER);
+    kS(vals)[3] = ss((S) BUILD_KX_VER);
+    
+    R xD(keys, vals);
+}
+
+extern "C"
+K LoadLibrary(K x)
 {
     O("\n");
     O("%s:\n",                          PROGRAM_NAME);
@@ -228,26 +315,26 @@ extern "C" K LoadLibrary(K x)
     O("compiler flags » %-5s\n",        BUILD_COMPILER_FLAGS);
     O("\n");
     
-    K keys = ktn(KS, 7);
-    K vals = ktn(0, 7);
+    K keys = ktn(KS, 8);
+    K vals = ktn(0, 8);
     
-    kS(keys)[0] = ss((S) "connect");
-    kS(keys)[1] = ss((S) "disconnect");
-    kS(keys)[2] = ss((S) "isconnected");
-    kS(keys)[3] = ss((S) "gethistprices");
-    kS(keys)[4] = ss((S) "reqmktdata");
-    kS(keys)[5] = ss((S) "createorder");
-    kS(keys)[6] = ss((S) "createocoorder");
+    kS(keys)[0] = ss((S) "version");
+    kS(keys)[1] = ss((S) "connect");
+    kS(keys)[2] = ss((S) "disconnect");
+    kS(keys)[3] = ss((S) "isconnected");
+    kS(keys)[4] = ss((S) "gethistprices");
+    kS(keys)[5] = ss((S) "reqmktdata");
+    kS(keys)[6] = ss((S) "createorder");
+    kS(keys)[7] = ss((S) "createocoorder");
     
-    kK(vals)[0] = dl((void *) connect, 4);
-    kK(vals)[1] = dl((void *) disconnect, 1);
-    kK(vals)[2] = dl((void *) isconnected, 1);
-    kK(vals)[3] = dl((void *) gethistprices, 4);
-    kK(vals)[4] = dl((void *) requestMarketData, 1);
-    kK(vals)[5] = dl((void *) createOrder, 4);
-    kK(vals)[6] = dl((void *) createOCOOrder, 6);
+    kK(vals)[0] = dl((void *) version, 1);
+    kK(vals)[1] = dl((void *) connect, 4);
+    kK(vals)[2] = dl((void *) disconnect, 1);
+    kK(vals)[3] = dl((void *) isconnected, 1);
+    kK(vals)[4] = dl((void *) gethistprices, 4);
+    kK(vals)[5] = dl((void *) requestMarketData, 1);
+    kK(vals)[6] = dl((void *) createOrder, 4);
+    kK(vals)[7] = dl((void *) createOCOOrder, 6);
     
     R xD(keys, vals);
 }
-
-

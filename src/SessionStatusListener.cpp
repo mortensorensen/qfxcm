@@ -2,12 +2,13 @@
 #include "SessionStatusListener.h"
 #include "Helpers.h"
 
+
 /** Constructor. */
 SessionStatusListener::SessionStatusListener(IO2GSession *session,
                                              bool printSubsessions,
                                              const char *sessionID,
-                                             const char *pin) {
-    
+                                             const char *pin)
+{
     mSessionID = sessionID != 0 ? sessionID : "";
     mPin = pin != 0 ? pin : "";
     mSession = session;
@@ -19,7 +20,8 @@ SessionStatusListener::SessionStatusListener(IO2GSession *session,
 }
 
 /** Destructor. */
-SessionStatusListener::~SessionStatusListener() {
+SessionStatusListener::~SessionStatusListener()
+{
     mSession->release();
     mSessionID.clear();
     mPin.clear();
@@ -27,44 +29,49 @@ SessionStatusListener::~SessionStatusListener() {
 }
 
 /** Increase reference counter. */
-long SessionStatusListener::addRef() {
+long SessionStatusListener::addRef()
+{
     return InterlockedIncrement(&mRefCount);
 }
 
 /** Decrease reference counter. */
-long SessionStatusListener::release() {
+long SessionStatusListener::release()
+{
     long rc = InterlockedDecrement(&mRefCount);
     if (rc == 0)
         delete this;
     return rc;
 }
 
-void SessionStatusListener::reset() {
+void SessionStatusListener::reset()
+{
     mConnected = false;
     mDisconnected = false;
     mError = false;
 }
 
 /** Callback called when login has been failed. */
-void SessionStatusListener::onLoginFailed(const char *error) {
-    consumeEvent("onloginfailed", kp((S)error));
+void SessionStatusListener::onLoginFailed(const char *error)
+{
+    consumeEvent("loginfailed", kp((S)error));
     mError = true;
 }
 
 /** Callback called when session status has been changed. */
-void SessionStatusListener::onSessionStatusChanged(IO2GSessionStatus::O2GSessionStatus status) {
+void SessionStatusListener::onSessionStatusChanged(IO2GSessionStatus::O2GSessionStatus status)
+{
     switch (status) {
         case IO2GSessionStatus::Disconnected:
-            consumeEvent("ondisconnected", kb(1));
+            consumeEvent("disconnected");
             mConnected = false;
             mDisconnected = true;
             SetEvent(mSessionEvent);
             break;
         case IO2GSessionStatus::Connecting:
-            consumeEvent("onconnecting", kb(1));
+            consumeEvent("connecting");
             break;
         case IO2GSessionStatus::TradingSessionRequested: {
-            consumeEvent("ontradingsessionrequested", kb(1));
+            consumeEvent("tradingsessionrequested");
             O2G2Ptr<IO2GSessionDescriptorCollection> descriptors =
                 mSession->getTradingSessionDescriptors();
             bool found = false;
@@ -78,7 +85,7 @@ void SessionStatusListener::onSessionStatusChanged(IO2GSessionStatus::O2GSession
                          descriptor->getID(),
                          descriptor->getName(),
                          descriptor->getDescription(),
-                         descriptor->requiresPin() ? "true" : "false");
+                         descriptor->requiresPin() ? "yes" : "no");
 
                    if (mSessionID == descriptor->getID()) {
                        found = true;
@@ -93,19 +100,22 @@ void SessionStatusListener::onSessionStatusChanged(IO2GSessionStatus::O2GSession
                 mSession->setTradingSession(mSessionID.c_str(), mPin.c_str());
         } break;
         case IO2GSessionStatus::Connected:
-            consumeEvent("onconnected", kb(1));
+            consumeEvent("connected");
             mConnected = true;
             mDisconnected = false;
             SetEvent(mSessionEvent);
             break;
         case IO2GSessionStatus::Reconnecting:
-            consumeEvent("onreconnecting", kb(1));
+            consumeEvent("reconnecting");
             break;
         case IO2GSessionStatus::Disconnecting:
-            consumeEvent("ondisconnecting", kb(1));
+            consumeEvent("disconnecting");
             break;
         case IO2GSessionStatus::SessionLost:
-            consumeEvent("onsessionlost", kb(1));
+            consumeEvent("sessionlost");
+            mSession->unsubscribeSessionStatus(this);
+            release();
+            mSession->release();
             break;
         default:
             break;
@@ -114,15 +124,25 @@ void SessionStatusListener::onSessionStatusChanged(IO2GSessionStatus::O2GSession
 }
 
 /** Check whether error happened. */
-bool SessionStatusListener::hasError() const { return mError; }
+bool SessionStatusListener::hasError() const
+{
+    return mError;
+}
 
 /** Check whether session is connected */
-bool SessionStatusListener::isConnected() const { return mConnected; }
+bool SessionStatusListener::isConnected() const
+{
+    return mConnected;
+}
 
 /** Check whether session is disconnected */
-bool SessionStatusListener::isDisconnected() const { return mDisconnected; }
+bool SessionStatusListener::isDisconnected() const
+{
+    return mDisconnected;
+}
 
 /** Wait for connection or error. */
-bool SessionStatusListener::waitEvents() {
+bool SessionStatusListener::waitEvents()
+{
     return WaitForSingleObject(mSessionEvent, _TIMEOUT) == 0;
 }

@@ -59,8 +59,17 @@ const K MarketDataSnapshotAccumulator::getTickTable()
     R xT(xD(cols, knk(3, dateTime, bid, ask)));
 }
 
+static inline void FillFromIterator(std::string::const_iterator begin, std::string::const_iterator end, K *values)
+{
+    for (auto it = begin; it != end; ++it) ja(values, ks((S) &it));
+}
+
 const K MarketDataSnapshotAccumulator::getBarTable()
 {
+//    K cols = ktn(KS, 0);
+//    const std::string mCols[] = { "DateTime", "BidOpen", "BidHigh", "BidLow", "BidClose", "AskOpen", "AskHigh", "AskLow", "AskClose", "Volume" };
+//    FillFromIterator(mCols->begin(), mCols->end(), &cols);
+
     K cols = ktn(KS, 10);
     kS(cols)[0] = ss((S) "DateTime");
     kS(cols)[1] = ss((S) "BidOpen");
@@ -87,7 +96,8 @@ const K MarketDataSnapshotAccumulator::getBarTable()
     K volume = ktn(KJ, N);
     
     J i = 0;
-    for (auto reader = mReaders.begin(), end = mReaders.end(); reader != end; ++reader)
+    // Loop backwards as most recent data is added first
+    for (auto reader = mReaders.rbegin(), end = mReaders.rend(); reader != end; ++reader)
     {
         for (J j = 0, jj = (*reader)->size(); j < jj; i++, j++)
         {
