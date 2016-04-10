@@ -5,56 +5,27 @@
  *
  */
 
-#include "ForexConnectClient.h"
+#include <config.h>
+
+#include "stdafx.h"
+#include "Helpers.h"
+#include "SessionStatusListener.h"
+#include "ResponseListener.h"
+#include "Offer.h"
+#include "MarketDataSnapshotAccumulator.h"
+
 
 IO2GSession *session;
 SessionStatusListener *sessionListener;
 ResponseListener *responseListener;
 
-
-namespace
+static void FillFromIterators(K* keys, K* vals)
 {
-    // TODO: Type conversions
-    template <class T>
-    K vector_to_k_list(const std::vector<T> &vector) {
-        typename std::vector<T>::const_iterator iter;
-        K list;
-        for (iter = vector.begin(); iter != vector.end(); ++iter) {
-            ja(&list, *iter);
-        }
-        R list;
-    }
     
-    template <class Key, class Val>
-    K map_to_k_dict(const std::map<Key, Val> &map) {
-        typename std::map<Key, Val>::const_iterator iter;
-        K keys, vals;
-        for (iter = map.begin(); iter != map.end(); ++iter) {
-            ja(&keys, iter->first);
-            ja(&vals, iter->second);
-        }
-        R xD(keys, vals);
-    }
 }
 
-LoginParams::LoginParams()
-{
-}
-
-LoginParams::LoginParams(const std::string& login,
-                         const std::string& password,
-                         const std::string& connection,
-                         const std::string& url)
-    : mLogin(login),
-    mPassword(password),
-    mConnection(connection),
-    mUrl(url)
-{
-}
-
-
-
-extern "C"
+extern "C" {
+    
 K connect(K host, K user, K password, K connection) {
     Q(host->t != -11 || user->t != -11 || password->t != -11 || connection->t != -11, "type");
     Q(sessionListener && sessionListener->isConnected(), "session");
@@ -75,7 +46,6 @@ K connect(K host, K user, K password, K connection) {
     R 0;
 }
 
-extern "C"
 K disconnect(K ignore) {
     Q(!session || !sessionListener, "session");
     
@@ -95,12 +65,10 @@ K disconnect(K ignore) {
     R 0;
 }
 
-extern "C"
 K isconnected(K ignore) {
     R kb(sessionListener && sessionListener->isConnected());
 }
 
-extern "C"
 K gethistprices(K kInstrument, K kTimeframe, K kBegin, K kEnd) {
     Q(!session || !sessionListener, "session");
     
@@ -169,7 +137,6 @@ K gethistprices(K kInstrument, K kTimeframe, K kBegin, K kEnd) {
     R accumulator->getTable();
 }
 
-extern "C"
 K requestMarketData(K kInstrument)
 {
     Q(kInstrument->t != -11, "type");
@@ -211,7 +178,6 @@ K requestMarketData(K kInstrument)
     R 0;
 }
 
-extern "C"
 K createOrder(K kAccountId, K kOfferId, K kAmount, K kCustomId)
 {
     Q(kAccountId->t != -11 || kOfferId->t != -7 || kAmount->t != -7 || kCustomId->t != -11, "type");
@@ -235,7 +201,6 @@ K createOrder(K kAccountId, K kOfferId, K kAmount, K kCustomId)
     R 0;
 }
 
-extern "C"
 K createOCOOrder(K kAccountId, K kOfferId, K kAmount, K kBuyRate, K kSellRate, K kCustomId)
 {
     Q(kAccountId->t != -11 || kOfferId->t != -7 || kAmount->t != -7 ||
@@ -267,7 +232,6 @@ K createOCOOrder(K kAccountId, K kOfferId, K kAmount, K kBuyRate, K kSellRate, K
     R 0;
 }
 
-extern "C"
 K getOrder(K x)
 {
     auto sOrderID = responseListener->getOrderID();
@@ -277,12 +241,8 @@ K getOrder(K x)
     R 0;
 }
 
-static void FillFromIterators(K* keys, K* vals)
-{
-    
-}
 
-extern "C"
+
 K version(K x)
 {
     K keys = ktn(KS, 4);
@@ -301,7 +261,6 @@ K version(K x)
     R xD(keys, vals);
 }
 
-extern "C"
 K LoadLibrary(K x)
 {
     O("\n");
@@ -337,4 +296,6 @@ K LoadLibrary(K x)
     kK(vals)[7] = dl((void *) createOCOOrder, 6);
     
     R xD(keys, vals);
+}
+
 }

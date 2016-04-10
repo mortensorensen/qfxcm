@@ -1,30 +1,25 @@
 .fxcm:(`:./build/Debug/qfxcm.0.0.1 2:(`LoadLibrary;1))`
+.fxcm.fixargs:{(),$[10h=type x;enlist x;x]}
+.fxcm.onrecv:{[fname;args] $[null code:.fxcm.callbacks[fname];.fxcm.unknown . (fname;args);code . args]}
+.fxcm.callbacks:()!()
+.fxcm.unknown:{[fname;args] -1(string .z.Z)," unknown function ",(string fname),", args: ";0N!args}
+.fxcm.reg:{[fname;code] @[`.fxcm.callbacks;fname;:;code];}
+.fxcm.dreg:{[fname] .fxcm.callbacks _::fname;}
 
-args:.Q.opt .z.x
-
-host:`$"http://www.fxcorporate.com/Hosts.jsp"
-user:first `$args[`user]
-pass:first `$args[`pass]
-connection:`Demo
 
 out:{-1(string .z.Z)," ",x;}
 
-.fxcm.onrecv:{[x]
-	show x;
-	}
+/ Default callbacks
+.fxcm.reg[`connecting]{out"status::connecting"}
+.fxcm.reg[`connected]{out"status::connected"}
+.fxcm.reg[`disconnecting]{out"status::disconnecting"}
+.fxcm.reg[`disconnected]{out"status::disconnected"}
+.fxcm.reg[`reconnecting]{out"status::reconnecting"}
+.fxcm.reg[`sessionlost]{out"status::session lost"}
+.fxcm.reg[`tradingsessionrequested]{out"status::trading session requested"}
+.fxcm.reg[`loginfailed]{[msg] out"status::the specified sub session id was not found: ",err}
 
-// Callbacks
-.fxcm.onconnecting:{out"status::connecting"}
-.fxcm.onconnected:{out"status::connected"}
-.fxcm.ondisconnecting:{out"status::disconnecting"}
-.fxcm.ondisconnected:{out"status::disconnected"}
-.fxcm.onreconnecting:{out"status::reconnecting"}
-.fxcm.onsessionlost:{out"status::session lost"}
-.fxcm.ontradingsessionrequested:{out"status::trading session requested"}
-.fxcm.onloginfailed:{out"status::the specified sub session id was not found"}
-
-.fxcm.onoffer:{out"offer received"}
-.fxcm.onlevel2data:{out"level 2 received"}
+.fxcm.reg[`histprices]{show x}
 
 // test
 instrument:`$"EUR/USD"
@@ -33,3 +28,9 @@ dtfrom:2016.03.01
 dtto:.z.d
 
 onhistprice:{show 10#x}
+
+args:.Q.opt .z.x
+host:`$"http://www.fxcorporate.com/Hosts.jsp"
+user:first `$args[`user]
+pass:first `$args[`pass]
+connection:`Demo

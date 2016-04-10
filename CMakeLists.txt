@@ -6,6 +6,7 @@ cmake_minimum_required (VERSION 3.1.0 FATAL_ERROR)
 set (PROGRAM_NAME     "qfxcm")
 set (PROGRAM_VER      "0.0.1")
 set (KX_VER           "3")
+set (FOREXCONNECT_VER "1.4.1")
 set (BINARY_NAME      "${PROGRAM_NAME}.${PROGRAM_VER}")
 
 option (BUILD_x86   "build a 32-bit binary instead of 64-bit"               ON)
@@ -13,16 +14,19 @@ option (BUILD_DEBUG "build debug versions of the binaries with symbols"     ON)
 
 project (${BINARY_NAME} CXX C)
 
-file (GLOB_RECURSE QFXCM_SRC
-  "${CMAKE_SOURCE_DIR}/src/*.h"
-  "${CMAKE_SOURCE_DIR}/src/*.cpp")
-
 set (FOREXCONNECT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../ForexConnectAPI-1.4.1-Darwin-i386")
 set (SAMPLE_TOOLS_DIR "${FOREXCONNECT_DIR}/samples/cpp/sample_tools")
 
 set (CMAKE_BINARY_DIR "${CMAKE_SOURCE_DIR}/build")
 
+configure_file ("${CMAKE_SOURCE_DIR}/config.h.in" "${CMAKE_BINARY_DIR}/include/config.h")
+
+file (GLOB_RECURSE QFXCM_SRC
+  "${CMAKE_SOURCE_DIR}/src/*.h"
+  "${CMAKE_SOURCE_DIR}/src/*.cpp")
+
 add_library (${BINARY_NAME} SHARED ${QFXCM_SRC})
+# add_library (${BINARY_NAME} SHARED "third_party/kx/k.h" "src/stdafx.h" "src/Helpers.h" "src/qforexconnect.cpp")
 
 include_directories ("${CMAKE_BINARY_DIR}/include"
                      "${FOREXCONNECT_DIR}/include"
@@ -96,7 +100,6 @@ execute_process (COMMAND
 #     WORKING_DIRECTORY ${EXECUTABLE_OUTPUT_PATH}
 #     VERBATIM)
 
-configure_file ("${CMAKE_SOURCE_DIR}/config.h.in" "${CMAKE_BINARY_DIR}/include/config.h")
 # configure_file ("${CMAKE_SOURCE_DIR}/README.md" "${CMAKE_SOURCE_DIR}/build/README.md")
 # configure_file ("${CMAKE_SOURCE_DIR}/LICENSE" "${CMAKE_SOURCE_DIR}/build/LICENSE")
 # configure_file ("${CMAKE_SOURCE_DIR}/src/config/qfxcm.q" "${CMAKE_SOURCE_DIR}/build/qfxcm.q")

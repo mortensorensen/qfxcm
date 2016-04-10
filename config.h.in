@@ -26,4 +26,6 @@
 #define BUILD_GIT_DATE              "@GIT_DATE@"
 #define BUILD_DATE                  "@BUILD_DATE@"
 #define BUILD_KX_VER                "@KX_VER@"
+#define BUILD_FOREXCONNECT_VER      "@FOREXCONNECT_VER@"
 #define PROGRAM_NAME								"@PROGRAM_NAME@"
+#define DEFAULT_FXCM_URL						"http://www40.fxcorporate.com/Hosts.jsp"

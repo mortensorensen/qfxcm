@@ -3,7 +3,7 @@
 
 #include "stdafx.h"
 #include "ResponseListener.h"
-#include "CommonSources.h"
+//#include "CommonSources.h"
 #include "Helpers.h"
 
 class MarketDataSnapshotAccumulator

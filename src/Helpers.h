@@ -4,8 +4,7 @@
 #include "stdafx.h"
 
 #define DBG(x, e) {if(x) O("%s\n", e);}
-#define Q(x, e) P(x, krr((S)e))
-
+#define Q(x, e) if(x) { krr((S)e); R 0; }
 #define TO_CPP(w) (reinterpret_cast<Wrapper *>(w))
 #define TO_C(w) (reinterpret_cast<wrapper *>(w))
 
@@ -67,16 +66,27 @@ inline bool oz(K t, F *mDateTo) {
     R kb(1);
 }
 
-inline K consumeEvent(const std::string &fun, K x) {
-    K ret = k(0, (S)fun.c_str(), x, (K)0);
+inline K identity()
+{
+    K id = ka(101);
+    id->g = 0;
+    R id;
+}
+
+//static K consumeEvent(const std::string &fun, K args = knk(0));
+static K consumeEvent(const std::string &fun, K args = knk(1, identity()));
+
+static K consumeEvent(const std::string &fun, K args) {
+    if (args->t < 0 || args->t == 10 || args->t > 19)
+        args = knk(1, args); // ensure we're always sending a list
+    K ret = k(0, (S)".fxcm.onrecv .", knk(2, ks((S)fun.c_str()), args), (K)0);
     
-    if (!ret)
-        O("Broken socket\n");
-    else if (ret->t == -128)
-        O("Error calling %s: %s\n", fun.c_str(), ret->s);
+    Q(!ret, "Broken socket");
+    if (ret->t == -128) O("Error calling %s: %s\n", fun.c_str(), ret->s);
 
     r0(ret);
     R 0;
 }
+
 
 #endif
