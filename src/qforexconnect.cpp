@@ -2,14 +2,14 @@
 
 #define Q(x, e) if(x) { krr((S)e); R 0; }
 
-using namespace ForexConnect;
+//using namespace ForexConnect;
 
-ForexConnectClient* client;
+ForexConnect::ForexConnectClient* client;
 
 // TODO: Implement MSVC equivalent
 __attribute__((constructor))
 static void initialize_api() {
-    client = new ForexConnectClient();
+    client = new ForexConnect::ForexConnectClient();
 }
 
 __attribute__((destructor))
@@ -150,22 +150,34 @@ K LoadLibrary(K x)
     K vals = ktn(0, 1);
     
     kS(keys)[0] = ss((S) "version");
-//    kS(keys)[1] = ss((S) "connect");
-//    kS(keys)[2] = ss((S) "disconnect");
+//    kS(keys)[1] = ss((S) "login");
+//    kS(keys)[2] = ss((S) "logout");
 //    kS(keys)[3] = ss((S) "isconnected");
-//    kS(keys)[4] = ss((S) "gethistprices");
-//    kS(keys)[5] = ss((S) "reqmktdata");
-//    kS(keys)[6] = ss((S) "createorder");
-//    kS(keys)[7] = ss((S) "createocoorder");
+//    kS(keys)[4] = ss((S) "getaccountid");
+//    kS(keys)[5] = ss((S) "getusedmargin");
+//    kS(keys)[6] = ss((S) "getbalance");
+//    kS(keys)[7] = ss((S) "getoffers");
+//    kS(keys)[8] = ss((S) "getbid");
+//    kS(keys)[9] = ss((S) "getask");
+//    kS(keys)[10] = ss((S) "gettrades");
+//    kS(keys)[11] = ss((S) "openposition");
+//    kS(keys)[12] = ss((S) "closeposition");
+//    kS(keys)[13] = ss((S) "gethistprices");
     
     kK(vals)[0] = dl((void *) version, 1);
-//    kK(vals)[1] = dl((void *) connect, 4);
-//    kK(vals)[2] = dl((void *) disconnect, 1);
-//    kK(vals)[3] = dl((void *) isconnected, 1);
-//    kK(vals)[4] = dl((void *) gethistprices, 4);
-//    kK(vals)[5] = dl((void *) requestMarketData, 1);
-//    kK(vals)[6] = dl((void *) createOrder, 4);
-//    kK(vals)[7] = dl((void *) createOCOOrder, 6);
+//    kK(vals)[1] = dl((void *) login, 4);
+//    kK(vals)[2] = dl((void *) logout, 1);
+//    kK(vals)[3] = dl((void *) isConnected, 1);
+//    kK(vals)[4] = dl((void *) getAccountId, 4);
+//    kK(vals)[5] = dl((void *) getUsedMargin, 1);
+//    kK(vals)[6] = dl((void *) getBalance, 1);
+//    kK(vals)[7] = dl((void *) getOffers, 1);
+//    kK(vals)[8] = dl((void *) getBid, 2);
+//    kK(vals)[9] = dl((void *) getAsk, 2);
+//    kK(vals)[10] = dl((void *) getTrades, 1);
+//    kK(vals)[11] = dl((void *) openPosition, 3);
+//    kK(vals)[12] = dl((void *) closePosition, 1);
+//    kK(vals)[13] = dl((void *) getHistoricalPrices, 4);
     
     R xD(keys, vals);
 }

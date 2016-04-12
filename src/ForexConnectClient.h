@@ -96,11 +96,6 @@ namespace ForexConnect {
                                                 const std::string& timeFrame = std::string("m1"));
         
     private:
-        void init();
-        IO2GAccountTableRow* getAccount();
-        IO2GTableManager* getLoadedTableManager();
-        std::vector<Prices> getPricesFromResponse(IO2GResponse* response);
-        LoginParams mLoginParams;
         IO2GSession* mpSession;
         SessionStatusListener* mpListener;
         ResponseListener* mpResponseListener;
@@ -110,6 +105,12 @@ namespace ForexConnect {
         IO2GRequestFactory* mpRequestFactory;
         std::string mAccountID;
         bool mIsConnected;
+        
+        void init();
+        IO2GAccountTableRow* getAccount();
+        IO2GTableManager* getLoadedTableManager();
+        std::vector<Prices> getPricesFromResponse(IO2GResponse* response);
+        LoginParams mLoginParams;
         
         static bool findOfferRowBySymbol(IO2GOfferRow *row, std::string symbol)
         {

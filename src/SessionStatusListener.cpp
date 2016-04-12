@@ -62,16 +62,19 @@ void SessionStatusListener::onSessionStatusChanged(IO2GSessionStatus::O2GSession
 {
     switch (status) {
         case IO2GSessionStatus::Disconnected:
-            consumeEvent("disconnected");
+//            consumeEvent("disconnected");
+            O("disconnected\n");
             mConnected = false;
             mDisconnected = true;
             SetEvent(mSessionEvent);
             break;
         case IO2GSessionStatus::Connecting:
-            consumeEvent("connecting");
+//            consumeEvent("connecting");
+            O("connecting\n");
             break;
         case IO2GSessionStatus::TradingSessionRequested: {
-            consumeEvent("tradingsessionrequested");
+//            consumeEvent("tradingsessionrequested");
+            O("tradingsessionrequested\n");
             O2G2Ptr<IO2GSessionDescriptorCollection> descriptors =
                 mSession->getTradingSessionDescriptors();
             bool found = false;
@@ -100,19 +103,23 @@ void SessionStatusListener::onSessionStatusChanged(IO2GSessionStatus::O2GSession
                 mSession->setTradingSession(mSessionID.c_str(), mPin.c_str());
         } break;
         case IO2GSessionStatus::Connected:
-            consumeEvent("connected");
+//            consumeEvent("connected");
+            O("connected\n");
             mConnected = true;
             mDisconnected = false;
             SetEvent(mSessionEvent);
             break;
         case IO2GSessionStatus::Reconnecting:
-            consumeEvent("reconnecting");
+//            consumeEvent("reconnecting");
+            O("reconnecting\n");
             break;
         case IO2GSessionStatus::Disconnecting:
-            consumeEvent("disconnecting");
+//            consumeEvent("disconnecting");
+            O("disconnecting\n");
             break;
         case IO2GSessionStatus::SessionLost:
-            consumeEvent("sessionlost");
+//            consumeEvent("sessionlost");
+            O("sessionlost\n");
             mSession->unsubscribeSessionStatus(this);
             release();
             mSession->release();

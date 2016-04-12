@@ -117,6 +117,11 @@ Prices::Prices(DATE date,
 {
 }
 
+bool Prices::operator==(const Prices &other)
+{
+    return *this == other;
+}
+
 bool Prices::operator!=(const Prices &other)
 {
     return !(*this == other);
@@ -166,18 +171,18 @@ ForexConnectClient::ForexConnectClient(const std::string& login,
 
 ForexConnectClient::~ForexConnectClient()
 {
-    mpRequestFactory->release();
-    mpAccountRow->release();
-    mpLoginRules->release();
-    mpResponseReaderFactory->release();
-    mpSession->release();
-    mpResponseListener->release();
+//    mpRequestFactory->release();
+//    mpAccountRow->release();
+//    mpLoginRules->release();
+//    mpResponseReaderFactory->release();
+//    mpSession->release();
+//    mpResponseListener->release();
     if (mIsConnected) {
         logout();
     }
-    mpSession->unsubscribeSessionStatus(mpListener);
-    mpListener->release();
-    mpSession->release();
+//    mpSession->unsubscribeSessionStatus(mpListener);
+//    mpListener->release();
+//    mpSession->release();
 }
 
 void ForexConnectClient::init()
