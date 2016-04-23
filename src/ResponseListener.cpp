@@ -120,8 +120,8 @@ void ResponseListener::onOffers(IO2GSession *session, IO2GResponse *response, co
     O("on offer ...\n");
     
     auto offersResponseReader = readerFactory->createOffersTableReader(response);
-    if (offersResponseReader != NULL) {
-        for (I i = 0, N = offersResponseReader->size(); i < N; ++i) {
+    if (!offersResponseReader) {
+        for (I i = 0;i < offersResponseReader->size(); ++i) {
             auto offerRow = offersResponseReader->getRow(i);
             Offer *offer = mOffers->findOffer(offerRow->getOfferID());
             if (offer) {
@@ -143,12 +143,14 @@ void ResponseListener::onOffers(IO2GSession *session, IO2GResponse *response, co
                 kS(keys)[2] = ss((S) "Bid");
                 kS(keys)[3] = ss((S) "Ask");
                 
-                K vals = knk(zo(offer->getDate()),
+                K vals = knk(4,
+                             toKTime(offer->getDate()),
                              ss((S) offer->getInstrument()),
                              offer->getBid(),
                              offer->getAsk());
                 
-                consumeEvent("onoffer", xD(keys, vals));
+//                consumeEvent("onoffer", xD(keys, vals));
+                O("ResponseListener: onoffer\n");
             }
         }
     }
@@ -170,5 +172,6 @@ void ResponseListener::onLevel2MarketData(IO2GSession *session, IO2GResponse *re
         }
     }
     
-    consumeEvent("onlevel2data", 0);
+//    consumeEvent("onlevel2data", 0);
+    O("ResponseListener: onlevel2\n");
 }

@@ -91,7 +91,7 @@ OfferCollection::~OfferCollection()
 /** Add offer to collection. */
 void OfferCollection::addOffer(Offer *offer)
 {
-    sample_tools::Mutex::Lock lock(m_Mutex);
+    sample_tools::Mutex::Lock l(m_Mutex);
     std::map<std::string, Offer *>::const_iterator iter = mIndex.find(offer->getID());
     if (iter != mIndex.end())
     {
@@ -112,7 +112,7 @@ void OfferCollection::addOffer(Offer *offer)
 /** Find offer by id. */
 Offer *OfferCollection::findOffer(const char *id) const
 {
-    sample_tools::Mutex::Lock lock(m_Mutex);
+    sample_tools::Mutex::Lock l(m_Mutex);
     std::map<std::string, Offer *>::const_iterator iter = mIndex.find(id);
     if (iter == mIndex.end())
         return 0;
@@ -123,20 +123,20 @@ Offer *OfferCollection::findOffer(const char *id) const
 /** Get number of offers. */
 int OfferCollection::size() const
 {
-    sample_tools::Mutex::Lock lock(m_Mutex);
+    sample_tools::Mutex::Lock l(m_Mutex);
     return (int)mOffers.size();
 }
 
 /** Get offer by index. */
 Offer *OfferCollection::get(int index) const
 {
-    sample_tools::Mutex::Lock lock(m_Mutex);
+    sample_tools::Mutex::Lock l(m_Mutex);
     return mOffers[index];
 }
 
 void OfferCollection::clear()
 {
-    sample_tools::Mutex::Lock lock(m_Mutex);
+    sample_tools::Mutex::Lock l(m_Mutex);
     int i;
     for (i = 0; i < (int)mOffers.size(); ++i)
         delete mOffers[i];

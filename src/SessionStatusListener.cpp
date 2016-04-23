@@ -62,39 +62,38 @@ void SessionStatusListener::onSessionStatusChanged(IO2GSessionStatus::O2GSession
 {
     switch (status) {
         case IO2GSessionStatus::Disconnected:
-//            consumeEvent("disconnected");
-            O("disconnected\n");
+            consumeEvent("disconnected");
             mConnected = false;
             mDisconnected = true;
             SetEvent(mSessionEvent);
             break;
         case IO2GSessionStatus::Connecting:
-//            consumeEvent("connecting");
-            O("connecting\n");
+            consumeEvent("connecting");
             break;
         case IO2GSessionStatus::TradingSessionRequested: {
-//            consumeEvent("tradingsessionrequested");
-            O("tradingsessionrequested\n");
+            consumeEvent("tradingsessionrequested");
             O2G2Ptr<IO2GSessionDescriptorCollection> descriptors =
                 mSession->getTradingSessionDescriptors();
             bool found = false;
             if (descriptors) {
                 if (mPrintSubsessions)
                     O("descriptors available:\n");
-                DO(descriptors->size(),
-                   O2G2Ptr<IO2GSessionDescriptor> descriptor = descriptors->get(i);
-                   if (mPrintSubsessions)
-                       O("  id:='%s' name='%s' description:='%s' requires pin:='%s'\n",
-                         descriptor->getID(),
-                         descriptor->getName(),
-                         descriptor->getDescription(),
-                         descriptor->requiresPin() ? "yes" : "no");
-
-                   if (mSessionID == descriptor->getID()) {
-                       found = true;
-                       break;
-                   }
-                )
+                
+                for (int i = 0; i < descriptors->size(); i++) {
+                    auto descriptor = descriptors->get(i);
+                    if (mPrintSubsessions) {
+                        O("  id:='%s' name='%s' description:='%s' requires pin:='%s'\n",
+                          descriptor->getID(),
+                          descriptor->getName(),
+                          descriptor->getDescription(),
+                          descriptor->requiresPin() ? "yes" : "no");
+                    }
+                    
+                    if (mSessionID == descriptor->getID()) {
+                        found = true;
+                        break;
+                    }
+                }
             }
 
             if (!found)
@@ -103,23 +102,19 @@ void SessionStatusListener::onSessionStatusChanged(IO2GSessionStatus::O2GSession
                 mSession->setTradingSession(mSessionID.c_str(), mPin.c_str());
         } break;
         case IO2GSessionStatus::Connected:
-//            consumeEvent("connected");
-            O("connected\n");
+            consumeEvent("connected");
             mConnected = true;
             mDisconnected = false;
             SetEvent(mSessionEvent);
             break;
         case IO2GSessionStatus::Reconnecting:
-//            consumeEvent("reconnecting");
-            O("reconnecting\n");
+            consumeEvent("reconnecting");
             break;
         case IO2GSessionStatus::Disconnecting:
-//            consumeEvent("disconnecting");
-            O("disconnecting\n");
+            consumeEvent("disconnecting");
             break;
         case IO2GSessionStatus::SessionLost:
-//            consumeEvent("sessionlost");
-            O("sessionlost\n");
+            consumeEvent("sessionlost");
             mSession->unsubscribeSessionStatus(this);
             release();
             mSession->release();

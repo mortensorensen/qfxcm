@@ -1,162 +1,18 @@
 #include "ForexConnectClient.h"
 #include <string.h>
+#include "Helpers.h"
 
 using namespace ForexConnect;
 
-namespace
-{
-    // TODO: Type conversions
-    template <class T>
-    K vector_to_k_list(const std::vector<T> &vector) {
-        typename std::vector<T>::const_iterator iter;
-        K list;
-        for (iter = vector.begin(); iter != vector.end(); ++iter) {
-            ja(&list, &iter);
-        }
-        R list;
-    }
-    
-    template <class Key, class Val>
-    K map_to_k_dict(const std::map<Key, Val> &map) {
-        typename std::map<Key, Val>::const_iterator iter;
-        K keys, vals;
-        for (iter = map.begin(); iter != map.end(); ++iter) {
-            ja(&keys, const_cast<Key*>(&iter->first));
-            ja(&vals, const_cast<Val*>(&iter->second));
-        }
-        R xD(keys, vals);
-    }
-}
-
-LoginParams::LoginParams()
-{
-}
-
-LoginParams::LoginParams(const std::string& login,
-                         const std::string& password,
-                         const std::string& connection,
-                         const std::string& url)
-    : mLogin(login),
-      mPassword(password),
-      mConnection(connection),
-      mUrl(url)
-{
-}
-
-bool LoginParams::areSet()
-{
-    return !(mLogin.empty() && mPassword.empty() && mConnection.empty() && mUrl.empty());
-}
-
-std::ostream& ForexConnect::operator<<(std::ostream &out, const ForexConnect::LoginParams &lp)
-{
-    out << "<'login': " << lp.mLogin
-        << ", 'password': " << lp.mPassword
-        << ", 'connection': " << lp.mConnection
-        << ", 'url': " << lp.mUrl << ">";
-    return out;
-}
-
-TradeInfo::TradeInfo()
-    : mOpenRate(0.0),
-      mOpenDate(std::time(0)),
-      mGrossPL(0.0)
-{
-}
-
-bool TradeInfo::operator==(const TradeInfo& other)
-{
-    return mTradeID == other.mTradeID;
-}
-
-bool TradeInfo::operator!=(const TradeInfo& other)
-{
-    return mTradeID != other.mTradeID;
-}
-
-std::ostream& ForexConnect::operator<<(std::ostream &out, const TradeInfo &ti)
-{
-    out << "<'instrument': " << ti.mInstrument
-        << ", 'trade_id': " << ti.mTradeID
-        << ", 'buy_sell': " << ti.mBuySell
-        << ", 'open_rate': " << ti.mOpenRate
-        << ", 'amount': " << ti.mAmount
-        << ", 'open_date': " << ti.mOpenDate
-        << ", 'gross_pl': " << ti.mGrossPL << ">";
-    return out;
-}
-
-Prices::Prices()
-    : mDate(std::time(0)),
-      mOpen(0.0),
-      mHigh(0.0),
-      mLow(0.0),
-      mClose(0.0)
-{
-}
-
-Prices::Prices(DATE date, double value)
-    : mDate(date),
-      mOpen(value),
-      mHigh(value),
-      mLow(value),
-      mClose(value)
-{
-}
-
-Prices::Prices(DATE date,
-               double open,
-               double high,
-               double low,
-               double close)
-    : mDate(date),
-      mOpen(open),
-      mHigh(high),
-      mLow(low),
-      mClose(close)
-{
-}
-
-bool Prices::operator==(const Prices &other)
-{
-    return *this == other;
-}
-
-bool Prices::operator!=(const Prices &other)
-{
-    return !(*this == other);
-}
-
-std::ostream& ForexConnect::operator<<(std::ostream &out, Prices const& pr)
-{
-    out << "<'date': " << pr.mDate
-        << ", 'open': " << pr.mOpen
-        << ", 'high': " << pr.mHigh
-        << ", 'low': " << pr.mLow
-        << ", 'close': " << pr.mClose << ">";
-    return out;
-}
-
 ForexConnectClient::ForexConnectClient()
-    : mpSession(NULL),
-    mpListener(NULL),
-    mpResponseListener(NULL),
-    mpLoginRules(NULL),
-    mpAccountRow(NULL),
-    mpResponseReaderFactory(NULL),
-    mpRequestFactory(NULL)
-{
-}
-
-ForexConnectClient::ForexConnectClient(const LoginParams& loginParams)
-    : mLoginParams(loginParams),
-    mpSession(NULL),
-    mpListener(NULL),
-    mpResponseListener(NULL),
-    mpLoginRules(NULL),
-    mpAccountRow(NULL),
-    mpResponseReaderFactory(NULL),
-    mpRequestFactory(NULL)
+    : mpSession(nullptr),
+    mpListener(nullptr),
+    mpResponseListener(nullptr),
+    mpLoginRules(nullptr),
+    mpAccountRow(nullptr),
+    mpResponseReaderFactory(nullptr),
+    mpRequestFactory(nullptr),
+    mpTableListener(new TableListener())
 {
     init();
 }
@@ -165,73 +21,61 @@ ForexConnectClient::ForexConnectClient(const std::string& login,
                                        const std::string& password,
                                        const std::string& connection,
                                        const std::string& url)
-    : ForexConnectClient::ForexConnectClient(*new LoginParams(login, password, connection, url))
 {
 }
 
 ForexConnectClient::~ForexConnectClient()
 {
-//    mpRequestFactory->release();
-//    mpAccountRow->release();
-//    mpLoginRules->release();
-//    mpResponseReaderFactory->release();
-//    mpSession->release();
-//    mpResponseListener->release();
+    if (mpRequestFactory) mpRequestFactory->release();
+    if (mpAccountRow) mpAccountRow->release();
+    if (mpLoginRules) mpLoginRules->release();
+    if (mpResponseReaderFactory) mpResponseReaderFactory->release();
+    if (mpResponseListener) mpResponseListener->release();
     if (mIsConnected) {
         logout();
     }
-//    mpSession->unsubscribeSessionStatus(mpListener);
-//    mpListener->release();
-//    mpSession->release();
+    mpSession->unsubscribeSessionStatus(mpListener);
+    mpListener->release();
+    mpSession->release();
 }
 
 void ForexConnectClient::init()
 {
     mpSession = CO2GTransport::createSession();
-    mpListener = new SessionStatusListener(mpSession, false);
+    mpListener = new SessionStatusListener(mpSession, false, "", "");
     mpSession->subscribeSessionStatus(mpListener);
     mpSession->useTableManager(Yes, 0);
+    
+    mpResponseListener = new ResponseListener(mpSession);
+    mpSession->subscribeResponse(mpResponseListener);
+
 }
 
-bool ForexConnectClient::login()
+K ForexConnectClient::login(K& login, K& password, K& connection, K& url)
 {
-    if (!mLoginParams.areSet()) {
-        krr((S) "Login params not specified");
-        return false;
-    }
-    return login(mLoginParams.mLogin,
-                 mLoginParams.mPassword,
-                 mLoginParams.mConnection,
-                 mLoginParams.mUrl);
-}
-
-bool ForexConnectClient::login(const std::string& login,
-                               const std::string& password,
-                               const std::string& connection,
-                               const std::string& url)
-{
+    Q(login->t != -KS || password->t != -KS || connection->t != -KS || url->t != -KS, "type");
+    Q(mIsConnected, "already connected");
+    Q(strcasecmp(connection->s, "Real") != 0 &&
+      strcasecmp(connection->s, "Demo") != 0,
+      "connection");
+    
     mpListener->reset();
-    mpSession->login(login.c_str(), password.c_str(), connection.c_str(), url.c_str());
+    mpSession->login(login->s, password->s, url->s, connection->s);
     mIsConnected = mpListener->waitEvents() && mpListener->isConnected();
-    if (!mIsConnected) {
-        krr((S) "Login failed.");
-        return false;
-    }
+    Q(!mIsConnected, "Couldn't connect");
     
     mpLoginRules = mpSession->getLoginRules();
     if (!mpLoginRules->isTableLoadedByDefault(Accounts)) {
         logout();
-        krr((S) "Accounts table not loaded");
-        return false;
+        R krr((S) "Accounts table not loaded");
     }
-    
+
     auto response = mpLoginRules->getTableRefreshResponse(Accounts);
     if (!response) {
         logout();
-        krr((S) "No response to refresh accounts table request");
-        return false;
+        R krr((S) "No response to refresh accounts table request");
     }
-    
+
     mpResponseReaderFactory = mpSession->getResponseReaderFactory();
     auto accountsResponseReader = mpResponseReaderFactory->createAccountsTableReader(response);
     mpAccountRow = accountsResponseReader->getRow(0);
@@ -242,36 +86,43 @@ bool ForexConnectClient::login(const std::string& login,
     
     mpRequestFactory = mpSession->getRequestFactory();
     
-    return mIsConnected;
+    R 0;
 }
 
 void ForexConnectClient::logout()
 {
     mpListener->reset();
+    if (!mIsConnected) {
+        O("already logged out");
+        return;
+    }
     mpSession->logout();
     mpListener->waitEvents();
     mIsConnected = false;
 }
 
-bool ForexConnectClient::isConnected() const
+K ForexConnectClient::isConnected() const
 {
-    return mIsConnected;
+    R kb(mIsConnected);
 }
 
-std::string ForexConnectClient::getAccountID() const
+K ForexConnectClient::getAccountID() const
 {
-    return mpAccountRow->getAccountID();
+    Q(!mIsConnected, "connection");
+    R ks((S)mpAccountRow->getAccountID());
 }
 
-double ForexConnectClient::getUsedMargin() const
+K ForexConnectClient::getUsedMargin() const
 {
-    return mpAccountRow->getUsedMargin();
+    Q(!mIsConnected, "connection");
+    R kf(mpAccountRow->getUsedMargin());
 }
 
-double ForexConnectClient::getBalance()
+K ForexConnectClient::getBalance()
 {
+    Q(!mIsConnected, "connection");
     auto account = getAccount();
-    return (!account) ? mpAccountRow->getBalance() : account->getBalance();
+    R kf((!account) ? mpAccountRow->getBalance() : account->getBalance());
 }
 
 std::map<std::string, std::string> ForexConnectClient::getOffers()
@@ -279,7 +130,7 @@ std::map<std::string, std::string> ForexConnectClient::getOffers()
     std::map<std::string, std::string> offers;
     auto tableManager = getLoadedTableManager();
     auto offersTable = static_cast<IO2GOffersTable*>(tableManager->getTable(Offers));
-    IO2GOfferTableRow *offerRow = NULL;
+    IO2GOfferTableRow *offerRow = nullptr;
     IO2GTableIterator it;
     while (offersTable->getNextRow(it, offerRow)) {
         offers[offerRow->getInstrument()] = offerRow->getOfferID();
@@ -288,52 +139,65 @@ std::map<std::string, std::string> ForexConnectClient::getOffers()
     return offers;
 }
 
-double ForexConnectClient::getBid(const std::string &instrument)
+K ForexConnectClient::getBid(K& instrument)
 {
+    Q(instrument->t != -KS, "type");
+    Q(!mIsConnected, "connection");
     auto tableManager = getLoadedTableManager();
     auto offersTable = static_cast<IO2GOffersTable*>(tableManager->getTable(Offers));
-    IO2GOfferTableRow *offerRow = NULL;
+    IO2GOfferTableRow *offerRow = nullptr;
     IO2GTableIterator iter;
     while (offersTable->getNextRow(iter, offerRow)) {
-        if (offerRow->getInstrument() == instrument) {
-            const double bid = offerRow->getBid();
+        if (strcasecmp(offerRow->getInstrument(), instrument->s) == 0) {
+            K bid = kf(offerRow->getBid());
             offerRow->release();
-            return bid;
+            R bid;
         }
         offerRow->release();
     }
-    krr((S) "Could not get offer table row");
-    return NULL;
+    R krr((S) "instrument");
 }
 
-double ForexConnectClient::getAsk(const std::string &instrument)
+K ForexConnectClient::getAsk(K& instrument)
 {
+    Q(instrument->t != -KS, "type");
+    Q(!mIsConnected, "connection");
     auto tableManager = getLoadedTableManager();
     auto offersTable = static_cast<IO2GOffersTable*>(tableManager->getTable(Offers));
-    IO2GOfferTableRow *offerRow = NULL;
+    IO2GOfferTableRow *offerRow = nullptr;
     IO2GTableIterator iter;
     while (offersTable->getNextRow(iter, offerRow)) {
-        if (offerRow->getInstrument() == instrument) {
-            const double ask = offerRow->getAsk();
+        if (strcasecmp(offerRow->getInstrument(), instrument->s) == 0) {
+            K ask = kf(offerRow->getAsk());
             offerRow->release();
-            return ask;
+            R ask;
         }
         offerRow->release();
     }
-    krr((S) "Could not get offer table row");
-    return NULL;
+    R krr((S) "instrument");
 }
 
-std::vector<TradeInfo> ForexConnectClient::getTrades()
+K ForexConnectClient::getTrades()
 {
-    std::vector<TradeInfo> trades;
+    Q(!mIsConnected, "connection");
     auto tableManager = getLoadedTableManager();
     auto tradesTable = static_cast<IO2GTradesTable*>(tableManager->getTable(Trades));
-    IO2GTradeTableRow* tradeRow = NULL;
+    IO2GTradeTableRow* tradeRow = nullptr;
     IO2GTableIterator tableIterator;
-    std::map<std::string, std::string> offers = getOffers();
+    auto offers = getOffers();
+    
+    K headers = vector_to_k_list(std::vector<std::string> {
+        "instrument", "tradeid", "openrate", "amount", "opentime", "grosspnl"
+    });
+
+    K instrument = ktn(KS, 0);
+    K tradeId    = ktn(KS, 0);
+    K openRate   = ktn(KF, 0);
+    K amount     = ktn(KJ, 0);
+    K openTime   = ktn(KZ, 0);
+    K grossPnL   = ktn(KF, 0);
+    
     while (tradesTable->getNextRow(tableIterator, tradeRow)) {
-        TradeInfo trade;
         // TODO: FIX
         auto it = std::find_if(offers.begin(), offers.end(),
                                [tradeRow](const std::pair<std::string, std::string>& x) -> bool {
@@ -342,150 +206,163 @@ std::vector<TradeInfo> ForexConnectClient::getTrades()
         
 //        Q(it == offers.end(), "Could not get offer table row");
         
-        trade.mInstrument = it->first;
-        trade.mTradeID = tradeRow->getTradeID();
-        trade.mBuySell = tradeRow->getBuySell();
-        trade.mOpenRate = tradeRow->getOpenRate();
-        trade.mAmount = tradeRow->getAmount();
-        trade.mOpenDate = tradeRow->getOpenTime();
-        trade.mGrossPL = tradeRow->getGrossPL();
-        trades.push_back(trade);
+        js(&instrument, ss((S)it->first.c_str()));
+        js(&tradeId,    ss((S)tradeRow->getTradeID()));
+        jk(&openRate,   kf(tradeRow->getOpenRate()));
+        jk(&amount,     kj(tradeRow->getAmount() > 0 ?
+                           tradeRow->getAmount() :
+                           -tradeRow->getAmount()));
+        jk(&openTime,   kz(toKTime(tradeRow->getOpenTime())));
+        jk(&grossPnL,   kf(tradeRow->getGrossPL()));
+        
         tradeRow->release();
     }
-    return trades;
+    
+    R xT(xD(headers, knk(6, instrument, tradeId, openRate, amount, openTime, grossPnL)));
 }
 
-bool ForexConnectClient::openPosition(const std::string &instrument,
-                                      const std::string &buysell,
-                                      int amount)
+K ForexConnectClient::openPosition(K& instrument, K& amount)
 {
-    if (buysell != O2G2::Buy && buysell != O2G2::Sell) {
-        return false;
-    }
+    Q(!mIsConnected, "connection");
+    Q(instrument->t != -KS || amount->t != -KJ, "type");
+    if (amount->j == 0) R 0;
     
+    // Find offer ID
     auto offers = getOffers();
     std::string offerID;
-    auto offer_itr = offers.find(instrument);
+    auto offer_itr = offers.find(instrument->s);
     if (offer_itr != offers.end()) {
         offerID = offer_itr->second;
     } else {
-        krr((S) "Could not find offer for for instrument ... "); // TODO: add instrument
-        return false;
+        R krr((S) "instrument");
     }
     
     auto tradingSettingsProvider = mpLoginRules->getTradingSettingsProvider();
-    auto iBaseUnitSize = tradingSettingsProvider->getBaseUnitSize(instrument.c_str(), mpAccountRow);
+    uint iBaseUnitSize = tradingSettingsProvider->getBaseUnitSize(instrument->s, mpAccountRow);
     auto valuemap = mpRequestFactory->createValueMap();
     valuemap->setString(Command, O2G2::Commands::CreateOrder);
     valuemap->setString(OrderType, O2G2::Orders::TrueMarketOpen);
     valuemap->setString(AccountID, mAccountID.c_str());
     valuemap->setString(OfferID, offerID.c_str());
-    valuemap->setString(BuySell, buysell.c_str());
-    valuemap->setInt(Amount, amount * iBaseUnitSize);
+    valuemap->setString(BuySell, amount->j > 0 ? O2G2::Buy : O2G2::Sell);
+    valuemap->setInt(Amount, amount->j * iBaseUnitSize);
     valuemap->setString(TimeInForce, O2G2::TIF::IOC);
     valuemap->setString(CustomID, "TrueMarketOrder");
     auto request = mpRequestFactory->createOrderRequest(valuemap);
     if (!request) {
-        krr((S) mpRequestFactory->getLastError());
-        return false;
+        R krr((S)mpRequestFactory->getLastError());
     }
     mpResponseListener->setRequestID(request->getRequestID());
     mpSession->sendRequest(request);
     if (mpResponseListener->waitEvents()) {
         Sleep(1000); // Wait for the balance update
         O("Done!\n");
-        return true;
+        R kb(true);
     }
-    krr((S) "Response waiting timeout expired");
-    return false;
+    R krr((S) "Response waiting timeout expired");
 }
 
-bool ForexConnectClient::closePosition(const std::string &tradeID)
+K ForexConnectClient::closePosition(K& tradeID)
 {
+    Q(!mIsConnected, "connection");
     auto tableManager = getLoadedTableManager();
     auto tradesTable = static_cast<IO2GTradesTable*>(tableManager->getTable(Trades));
-    IO2GTradeTableRow *tradeRow = NULL;
+    IO2GTradeTableRow *tradeRow = nullptr;
     IO2GTableIterator tableIterator;
     while (tradesTable->getNextRow(tableIterator, tradeRow)) {
-        if (tradeID == tradeRow->getTradeID())
+        if (strcmp(tradeID->s, tradeRow->getTradeID()) == 0)
             break;
     }
     if (!tradeRow) {
-        krr((S) "Could not found trade with ID = ..."); // TODO: add trade id
-        return false;
+        R krr((S)string_format("Could not found trade with ID = %s", tradeID->s).c_str());
     }
     auto valuemap = mpRequestFactory->createValueMap();
     valuemap->setString(Command, O2G2::Commands::CreateOrder);
     valuemap->setString(OrderType, O2G2::Orders::TrueMarketClose);
     valuemap->setString(AccountID, mAccountID.c_str());
     valuemap->setString(OfferID, tradeRow->getOfferID());
-    valuemap->setString(TradeID, tradeID.c_str());
+    valuemap->setString(TradeID, tradeID->s);
     valuemap->setString(BuySell, (strcmp(tradeRow->getBuySell(), O2G2::Buy) == 0) ? O2G2::Sell : O2G2::Buy);
     tradeRow->release();
     valuemap->setInt(Amount, tradeRow->getAmount());
     valuemap->setString(CustomID, "CloseMarketOrder");
     auto request = mpRequestFactory->createOrderRequest(valuemap);
     if (!request) {
-        krr((S) mpRequestFactory->getLastError());
-        return false;
+        R krr((S) mpRequestFactory->getLastError());
     }
     mpResponseListener->setRequestID(request->getRequestID());
     mpSession->sendRequest(request);
     if (mpResponseListener->waitEvents()) {
         Sleep(1000); // Wait for the balance update
         O("Done!\n");
-        return true;
+        R kb(true);
     }
-    krr((S) "Response waiting timeout expired");
-    return false;
+    R krr((S) "Response waiting timeout expired");
 }
 
-std::vector<Prices> ForexConnectClient::getHistoricalPrices(const std::string &instrument,
+K ForexConnectClient::getHistoricalPrices(const std::string &instrument,
                                                             const DATE from,
                                                             const DATE to,
                                                             const std::string& timeFrame)
 {
-    std::vector<Prices> prices;
+    K prices;
     auto timeframeCollection = mpRequestFactory->getTimeFrameCollection();
     auto timeframe = timeframeCollection->get(timeFrame.c_str());
-    if (!timeframe) {
-        krr((S) "Timeframe ... is incorrect"); // TODO: add timeframe
-        return prices;
-    }
-    auto request = mpRequestFactory->createMarketDataSnapshotRequestInstrument(instrument.c_str(),
-                                                                               timeframe,
-                                                                               timeframe->getQueryDepth());
+    Q(!timeframe, "Timeframe is incorrect");
+    
+    auto request = mpRequestFactory->createMarketDataSnapshotRequestInstrument(instrument.c_str(), timeframe, timeframe->getQueryDepth());
     DATE first = to;
     do
     {
         mpRequestFactory->fillMarketDataSnapshotRequestTime(request, from, first, false);
         mpResponseListener->setRequestID(request->getRequestID());
         mpSession->sendRequest(request);
-        if (!mpResponseListener->waitEvents()) {
-            krr((S) "Response waiting timeout expired");
-            return prices;
-        }
+        Q(!mpResponseListener->waitEvents(), "Response waiting timeout expired");
+        
         // shift "to" bound to oldest datetime of returned data
         auto response = mpResponseListener->getResponse();
         if (response && response->getType() == MarketDataSnapshot) {
             auto reader = mpResponseReaderFactory->createMarketDataSnapshotReader(response);
-            if (reader->size() > 0) {
-                if (fabs(first - reader->getDate(0)) > 0.0001)
-                    first = reader->getDate(0); // earliest datetime of return data
-                else
-                    break;
-            } else {
-                O("0 rows received\n");
+            Q(reader->size() == 0, "0 rows received");
+            if (fabs(first - reader->getDate(0)) <= 0.0001)
                 break;
-            }
-            auto px = getPricesFromResponse(response);
-            prices.insert(prices.end(), px.begin(), px.end());
+            
+            first = reader->getDate(0); // earliest datetime of return data
+            jk(&prices, getPricesFromResponse(response));
         } else {
             break;
         }
     } while (first - from > 0.0001);
 
-    return prices;
+    R prices;
+}
+
+K ForexConnectClient::subscribeOffers(K& instrument)
+{
+    Q(instrument->t != -KS, "type");
+    Q(!mIsConnected, "connection");
+    
+    // Print current quotes
+    auto tableManager = getLoadedTableManager();
+    auto offers = (IO2GOffersTable *)tableManager->getTable(Offers);
+    mpTableListener->printOffers(offers, "");
+    
+    mpTableListener->setInstrument(instrument->s);
+    mpTableListener->subscribeEvents(tableManager);
+    
+    R 0;
+}
+
+K ForexConnectClient::unsubscribeOffers(K x)
+{
+    mpTableListener->unsubscribeEvents(getLoadedTableManager());
+    R 0;
+}
+
+K ForexConnectClient::getservertime(K x)
+{
+    Q(!mIsConnected, "connection");
+    R kz(toKTime(mpSession->getServerTime()));
 }
 
 IO2GAccountTableRow* ForexConnectClient::getAccount()
@@ -506,7 +383,7 @@ IO2GAccountTableRow* ForexConnectClient::getAccount()
         }
         account->release();
     }
-    return NULL;
+    return nullptr;
 }
 
 IO2GTableManager* ForexConnectClient::getLoadedTableManager()
@@ -519,36 +396,52 @@ IO2GTableManager* ForexConnectClient::getLoadedTableManager()
     }
     
     if (managerStatus == TablesLoadFailed) {
-        krr((S) "Cannot refresh all tables of table manager");
-        return NULL;
+        O("Cannot refresh all tables of table manager\n");
+        return nullptr;
     }
     return tableManager.Detach();
 }
 
-std::vector<Prices> ForexConnectClient::getPricesFromResponse(IO2GResponse *response)
+K ForexConnectClient::getPricesFromResponse(IO2GResponse *response)
 {
-    std::vector<Prices> prices;
-    if (!response || response->getType() != MarketDataSnapshot)
-        return prices;
+    if (!response || response->getType() != MarketDataSnapshot) R 0;
     
     O("Request with RequestID='%s' is completed:\n", response->getRequestID());
     
     auto reader = mpResponseReaderFactory->createMarketDataSnapshotReader(response);
-    if (!reader)
-        return prices;
+    if (!reader) R 0;
     
-    for (int i = reader->size() - 1; i >= 0; i--) {
-        if (reader->isBar()) {
-            prices.push_back(Prices(reader->getDate(i),
-                                    reader->getAskOpen(i),
-                                    reader->getAskHigh(i),
-                                    reader->getAskLow(i),
-                                    reader->getAskClose(i)));
-        } else {
-            prices.push_back(Prices(reader->getDate(i), reader->getAsk(i)));
-        }
+    size_t nPrices = reader->size() - 1;
+    
+    if (reader->isBar()) {
+        K headers = vector_to_k_list(std::vector<std::string> {"date", "askopen", "askhigh", "asklow", "askclose"});
+        K date = ktn(KZ, nPrices);
+        K open = ktn(KF, nPrices);
+        K high = ktn(KF, nPrices);
+        K low  = ktn(KF, nPrices);
+        K close = ktn(KF, nPrices);
+        K volume = ktn(KJ, nPrices);
+        
+        DO(nPrices,
+           kF(date)[i] = reader->getDate(nPrices - i);
+           kF(open)[i] = reader->getAskOpen(nPrices - i);
+           kF(high)[i] = reader->getAskHigh(nPrices - i);
+           kF(low)[i] = reader->getAskLow(nPrices - i);
+           kF(close)[i] = reader->getAskClose(nPrices - i);
+           kF(volume)[i] = reader->getVolume(nPrices - i));
+        
+        R xT(xD(headers, knk(6, date, open, high, low, close, volume)));
+    } else {
+        K headers = vector_to_k_list(std::vector<std::string> {"date", "ask" });
+        K date = ktn(KZ, nPrices);
+        K ask  = ktn(KF, nPrices);
+        
+        DO(nPrices,
+           kF(date)[i] = reader->getDate(nPrices - i);
+           kF(ask)[i] = reader->getAskOpen(nPrices - i));
+        
+        R xT(xD(headers, knk(2, date, ask)));
     }
-    return prices;
 }
 
 void ForexConnect::setLogLevel(int level)

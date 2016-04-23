@@ -5,8 +5,6 @@
 
 #define DBG(x, e) {if(x) O("%s\n", e);}
 #define Q(x, e) if(x) { krr((S)e); R 0; }
-#define TO_CPP(w) (reinterpret_cast<Wrapper *>(w))
-#define TO_C(w) (reinterpret_cast<wrapper *>(w))
 
 
 inline F zu(I u) { return u / 8.64e4 - 10957; }  // kdb+ datetime from unix
@@ -57,36 +55,67 @@ inline char *ftsms(unsigned ts, char *d) {
     return d;
 }
 
-inline F zo(const F dt) { R dt - 36526; } // kdb+ time from COleTime
+static inline F toKTime(const DATE dt) { return roundf((dt - 36526) * 1e10) / 1e10; }
 
-// COleTime from kdb+ time
-inline bool oz(K t, F *mDateTo) {
+static double toCOleTime(K t) {
+    double d;
     struct tm tmBuf = *lt(t->i);
-    CO2GDateUtils::CTimeToOleTime(&tmBuf, mDateTo);
-    R kb(1);
+    CO2GDateUtils::CTimeToOleTime(&tmBuf, &d);
+    return d;
 }
 
-inline K identity()
+inline K convert(const char *x) { R ks((S)x); }
+inline K convert(const std::string &x) { R ks((S)x.c_str()); }
+inline K convert(const int x) { R ki(x); }
+inline K convert(const double x) { R kf(x); }
+inline K convert(const bool x) { R kb(x); }
+
+template <class T>
+K vector_to_k_list(const std::vector<T> &vector) {
+    K list;
+    for (auto it = vector.begin(); it != vector.end(); ++it) {
+        jk(&list, convert(&it));
+    }
+    R list;
+}
+
+template <class Key, class Val>
+K map_to_k_dict(const std::map<Key, Val> &map) {
+    K keys, vals;
+    for (auto it = map.begin(); it != map.end(); ++it) {
+        jk(&keys, convert(&it->first));
+        jk(&vals, convert(&it->second));
+    }
+    R xD(keys, vals);
+}
+
+
+// http://stackoverflow.com/questions/2342162/stdstring-formatting-like-sprintf
+template<typename ... Args>
+std::string string_format(const std::string& format, Args ... args)
 {
-    K id = ka(101);
-    id->g = 0;
-    R id;
+    size_t size = snprintf(nullptr, 0, format.c_str(), args ...) + 1; // Extra space for '\0'
+    std::unique_ptr<char[]> buf(new char[size]);
+    snprintf(buf.get(), size, format.c_str(), args ...);
+    return std::string(buf.get(), buf.get() + size - 1); // We don't want the '\0' inside
 }
 
-//static K consumeEvent(const std::string &fun, K args = knk(0));
-static K consumeEvent(const std::string &fun, K args = knk(1, identity()));
-
-static K consumeEvent(const std::string &fun, K args) {
+static void consumeEvent(const char *fun, K args) {
     if (args->t < 0 || args->t == 10 || args->t > 19)
         args = knk(1, args); // ensure we're always sending a list
-    K ret = k(0, (S)".fxcm.onrecv .", knk(2, ks((S)fun.c_str()), args), (K)0);
-    
-    Q(!ret, "Broken socket");
-    if (ret->t == -128) O("Error calling %s: %s\n", fun.c_str(), ret->s);
+    K r = k(0, (S)".fxcm.onrecv .", knk(2, ks((S)fun), args), (K)0);
 
-    r0(ret);
-    R 0;
+    if (r->t == -128)
+        O("%s\n", r->s);
+//        krr(r->s);
+    
+    r0(r);
 }
 
+static void consumeEvent(const char *fun) {
+    K identity = ka(101);
+    identity->g = 0;
+    consumeEvent(fun, identity);
+}
 
 #endif

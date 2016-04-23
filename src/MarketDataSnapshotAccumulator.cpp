@@ -50,7 +50,7 @@ const K MarketDataSnapshotAccumulator::getTickTable()
     {
         for (J j = 0, jj = (*reader)->size(); j < jj; i++, j++)
         {
-            kF(dateTime)[i] = zo((*reader)->getDate(j));
+            kF(dateTime)[i] = toKTime((*reader)->getDate(j));
             kF(bid)[i] = (*reader)->getBid(j);
             kF(ask)[i] = (*reader)->getAsk(j);
         }
@@ -101,7 +101,7 @@ const K MarketDataSnapshotAccumulator::getBarTable()
     {
         for (J j = 0, jj = (*reader)->size(); j < jj; i++, j++)
         {
-            kF(dateTime)[i] = zo((*reader)->getDate(j));
+            kF(dateTime)[i] = toKTime((*reader)->getDate(j));
             kF(bidOpen)[i] = (*reader)->getBidOpen(j);
             kF(bidHigh)[i] = (*reader)->getBidHigh(j);
             kF(bidLow)[i] = (*reader)->getBidLow(j);

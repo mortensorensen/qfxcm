@@ -17,9 +17,9 @@ project (${BINARY_NAME} CXX C)
 set (FOREXCONNECT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../ForexConnectAPI-1.4.1-Darwin-i386")
 set (SAMPLE_TOOLS_DIR "${FOREXCONNECT_DIR}/samples/cpp/sample_tools")
 
-set (CMAKE_BINARY_DIR "${CMAKE_SOURCE_DIR}/build")
+file (MAKE_DIRECTORY "${CMAKE_SOURCE_DIR}/bin")
 
-configure_file ("${CMAKE_SOURCE_DIR}/config.h.in" "${CMAKE_BINARY_DIR}/include/config.h")
+set (CMAKE_BINARY_DIR "${CMAKE_SOURCE_DIR}/bin")
 
 file (GLOB_RECURSE QFXCM_SRC
   "${CMAKE_SOURCE_DIR}/src/*.h"
@@ -73,6 +73,9 @@ elseif (${CMAKE_SYSTEM} MATCHES "Darwin")
           SUFFIX ".so")
 endif ()
 
+# Move finished binaries into binary folder if installing
+install (TARGETS ${BINARY_NAME} DESTINATION "${CMAKE_SOURCE_DIR}/bin")
+
 execute_process (COMMAND
   "git" describe --match=NeVeRmAtCh --always --abbrev=40 --dirty
   WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
@@ -90,6 +93,8 @@ execute_process (COMMAND
   WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
   OUTPUT_VARIABLE BUILD_DATE
   ERROR_QUIET OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+configure_file ("${CMAKE_SOURCE_DIR}/config.h.in" "${CMAKE_BINARY_DIR}/include/config.h")
 
 # Post - build event to create symlinks for shared objects
 # add_custom_command (TARGET ${BINARY_NAME}

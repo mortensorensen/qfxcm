@@ -10,9 +10,9 @@
 out:{-1(string .z.Z)," ",x;}
 
 / Default callbacks
-.fxcm.reg[`connecting]{out"status::connecting"}
+.fxcm.reg[`connecting]{out"status::connecting"; a::3}
 .fxcm.reg[`connected]{out"status::connected"}
-.fxcm.reg[`disconnecting]{out"status::disconnecting"}
+.fxcm.reg[`disconnecting]{out"status::disconnecting"; a::2}
 .fxcm.reg[`disconnected]{out"status::disconnected"}
 .fxcm.reg[`reconnecting]{out"status::reconnecting"}
 .fxcm.reg[`sessionlost]{out"status::session lost"}
@@ -20,6 +20,10 @@ out:{-1(string .z.Z)," ",x;}
 .fxcm.reg[`loginfailed]{[msg] out"status::the specified sub session id was not found: ",err}
 
 .fxcm.reg[`histprices]{show x}
+/.fxcm.reg[`onoffer]{[time;sym;bid;ask] `. `.fxcm.ticks insert (time;sym;bid;ask)}
+.fxcm.reg[`onoffer]{[time;sym;bid;ask] a::1}
+
+.fxcm.ticks:([] date:`datetime$(); sym:`symbol$(); bid:`float$(); ask:`float$())
 
 // test
 instrument:`$"EUR/USD"
