@@ -55,13 +55,20 @@ inline char *ftsms(unsigned ts, char *d) {
     return d;
 }
 
-static inline F toKTime(const DATE dt) { return roundf((dt - 36526) * 1e10) / 1e10; }
+static K toKTime(const DATE &dt) {
+    struct tm cTime;
+    CO2GDateUtils::OleTimeToCTime(dt, &cTime);
+    time_t unixTime = timegm(&cTime);
+    R kz(zu(unixTime));
+}
 
-static double toCOleTime(K t) {
-    double d;
-    struct tm tmBuf = *lt(t->i);
-    CO2GDateUtils::CTimeToOleTime(&tmBuf, &d);
-    return d;
+static DATE toOleTime(K dt) {
+    time_t unixTime = uz(dt->f);
+//    r0(dt);
+    struct tm *cTime = gmtime(&unixTime);
+    DATE oleTime;
+    CO2GDateUtils::CTimeToOleTime(cTime, &oleTime);
+    R oleTime;
 }
 
 inline K convert(const char *x) { R ks((S)x); }

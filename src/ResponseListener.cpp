@@ -2,9 +2,9 @@
 #include <math.h>
 #include <sstream>
 #include <iomanip>
-#include "Offer.h"
 #include "ResponseListener.h"
 #include "Helpers.h"
+#include "Offer.h"
 
 ResponseListener::ResponseListener(IO2GSession *session)
 {
@@ -121,7 +121,7 @@ void ResponseListener::onOffers(IO2GSession *session, IO2GResponse *response, co
     
     auto offersResponseReader = readerFactory->createOffersTableReader(response);
     if (!offersResponseReader) {
-        for (I i = 0;i < offersResponseReader->size(); ++i) {
+        for (uint i = 0;i < offersResponseReader->size(); ++i) {
             auto offerRow = offersResponseReader->getRow(i);
             Offer *offer = mOffers->findOffer(offerRow->getOfferID());
             if (offer) {

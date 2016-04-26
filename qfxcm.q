@@ -6,6 +6,39 @@
 .fxcm.reg:{[fname;code] @[`.fxcm.callbacks;fname;:;code];}
 .fxcm.dreg:{[fname] .fxcm.callbacks _::fname;}
 
+system"l ",getenv[`QFXCMROOT],"/tags.q"
+
+.fxcm.getofferid:{$[null id:.fxcm.getoffers[][x];'`instrument;id]}
+
+.fxcm.createorderstub:{
+  order:enlist[]!enlist[];
+	order[.fxcm.params.Command]: .fxcm.commands.CreateOrder;
+	order[.fxcm.params.AccountID]: .fxcm.getaccountid[];
+	:order
+ }
+
+.fxcm.truemarketopen:{[instrument;amount]
+	order:.fxcm.createorderstub[];
+	order[.fxcm.params.OrderType]: .fxcm.orders.TrueMarketOpen;
+	order[.fxcm.params.OfferID]: .fxcm.getofferid[instrument];
+	order[.fxcm.params.BuySell]: $[amount>0;.fxcm.Buy;.fxcm.Sell];
+	order[.fxcm.params.Amount]: amount; / * .fxcm.getbaseunitsize[instrument];
+	/ order[.fxcm.params.Amount]: 100;
+	order[.fxcm.params.TimeInForce]: .fxcm.tif.IOC;
+	order[.fxcm.params.CustomID]: `TrueMarketOrder;
+	.fxcm.openposition[order _(::)]
+ }
+
+.fxcm.truemarketclose:{[tradeid]
+	order:.fxcm.createorderstub[];
+	order[.fxcm.params.OrderType]: .fxcm.orders.TrueMarketClose;
+	order[.fxcm.params.OfferID]: 1;
+	order[.fxcm.params.TradeID]: 1;
+	order[.fxcm.params.BuySell]: 1;
+	order[.fxcm.params.Amount]: 1;
+	order[.fxcm.params.CustomID]: `TrueMarketClose;
+	.fxcm.openposition[order _(::)]
+ }
 
 out:{-1(string .z.Z)," ",x;}
 
@@ -25,16 +58,4 @@ out:{-1(string .z.Z)," ",x;}
 
 .fxcm.ticks:([] date:`datetime$(); sym:`symbol$(); bid:`float$(); ask:`float$())
 
-// test
-instrument:`$"EUR/USD"
-timeframe:`H1
-dtfrom:2016.03.01
-dtto:.z.d
-
 onhistprice:{show 10#x}
-
-args:.Q.opt .z.x
-host:`$"http://www.fxcorporate.com/Hosts.jsp"
-user:first `$args[`user]
-pass:first `$args[`pass]
-connection:`Demo

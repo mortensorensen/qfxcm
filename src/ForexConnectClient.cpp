@@ -186,12 +186,16 @@ K ForexConnectClient::getTrades()
     IO2GTableIterator tableIterator;
     auto offers = getOffers();
     
-    K headers = vector_to_k_list(std::vector<std::string> {
-        "instrument", "tradeid", "openrate", "amount", "opentime", "grosspnl"
-    });
-
-    K instrument = ktn(KS, 0);
+    K headers = ktn(KS, 6);
+    kS(headers)[0] = ss((S)"tradeid");
+    kS(headers)[1] = ss((S)"instrument");
+    kS(headers)[2] = ss((S)"openrate");
+    kS(headers)[3] = ss((S)"amount");
+    kS(headers)[4] = ss((S)"opentime");
+    kS(headers)[5] = ss((S)"grosspnl");
+    
     K tradeId    = ktn(KS, 0);
+    K instrument = ktn(KS, 0);
     K openRate   = ktn(KF, 0);
     K amount     = ktn(KJ, 0);
     K openTime   = ktn(KZ, 0);
@@ -206,48 +210,38 @@ K ForexConnectClient::getTrades()
         
 //        Q(it == offers.end(), "Could not get offer table row");
         
-        js(&instrument, ss((S)it->first.c_str()));
         js(&tradeId,    ss((S)tradeRow->getTradeID()));
-        jk(&openRate,   kf(tradeRow->getOpenRate()));
-        jk(&amount,     kj(tradeRow->getAmount() > 0 ?
+        js(&instrument, ss((S)it->first.c_str()));
+        ja(&openRate,   kf(tradeRow->getOpenRate()));
+        ja(&amount,     kj(tradeRow->getAmount() > 0 ?
                            tradeRow->getAmount() :
                            -tradeRow->getAmount()));
-        jk(&openTime,   kz(toKTime(tradeRow->getOpenTime())));
-        jk(&grossPnL,   kf(tradeRow->getGrossPL()));
+        ja(&openTime,   toKTime(tradeRow->getOpenTime()));
+        ja(&grossPnL,   kf(tradeRow->getGrossPL()));
         
         tradeRow->release();
     }
     
-    R xT(xD(headers, knk(6, instrument, tradeId, openRate, amount, openTime, grossPnL)));
+    R xT(xD(headers, knk(6, tradeId, instrument, openRate, amount, openTime, grossPnL)));
 }
 
-K ForexConnectClient::openPosition(K& instrument, K& amount)
+K ForexConnectClient::openPosition(K& dict)
 {
     Q(!mIsConnected, "connection");
-    Q(instrument->t != -KS || amount->t != -KJ, "type");
-    if (amount->j == 0) R 0;
+//    Q(instrument->t != -KS || amount->t != -KJ, "type");
+//    if (amount->j == 0) R 0;
     
     // Find offer ID
-    auto offers = getOffers();
-    std::string offerID;
-    auto offer_itr = offers.find(instrument->s);
-    if (offer_itr != offers.end()) {
-        offerID = offer_itr->second;
-    } else {
-        R krr((S) "instrument");
-    }
+//    auto offers = getOffers();
+//    auto offerItr = offers.find(instrument->s);
+//    Q(offerItr == offers.end(), "instrument");
+//    std::string offerID = offerItr->second;
     
-    auto tradingSettingsProvider = mpLoginRules->getTradingSettingsProvider();
-    uint iBaseUnitSize = tradingSettingsProvider->getBaseUnitSize(instrument->s, mpAccountRow);
-    auto valuemap = mpRequestFactory->createValueMap();
-    valuemap->setString(Command, O2G2::Commands::CreateOrder);
-    valuemap->setString(OrderType, O2G2::Orders::TrueMarketOpen);
-    valuemap->setString(AccountID, mAccountID.c_str());
-    valuemap->setString(OfferID, offerID.c_str());
-    valuemap->setString(BuySell, amount->j > 0 ? O2G2::Buy : O2G2::Sell);
-    valuemap->setInt(Amount, amount->j * iBaseUnitSize);
-    valuemap->setString(TimeInForce, O2G2::TIF::IOC);
-    valuemap->setString(CustomID, "TrueMarketOrder");
+//    auto tradingSettingsProvider = mpLoginRules->getTradingSettingsProvider();
+//    uint iBaseUnitSize = tradingSettingsProvider->getBaseUnitSize(instrument->s, mpAccountRow);
+    
+    auto valuemap = createValueMap(dict);
+    Q(!valuemap, "error");
     auto request = mpRequestFactory->createOrderRequest(valuemap);
     if (!request) {
         R krr((S)mpRequestFactory->getLastError());
@@ -262,30 +256,21 @@ K ForexConnectClient::openPosition(K& instrument, K& amount)
     R krr((S) "Response waiting timeout expired");
 }
 
-K ForexConnectClient::closePosition(K& tradeID)
+K ForexConnectClient::closePosition(K& dict)
 {
     Q(!mIsConnected, "connection");
-    auto tableManager = getLoadedTableManager();
-    auto tradesTable = static_cast<IO2GTradesTable*>(tableManager->getTable(Trades));
-    IO2GTradeTableRow *tradeRow = nullptr;
-    IO2GTableIterator tableIterator;
-    while (tradesTable->getNextRow(tableIterator, tradeRow)) {
-        if (strcmp(tradeID->s, tradeRow->getTradeID()) == 0)
-            break;
-    }
-    if (!tradeRow) {
-        R krr((S)string_format("Could not found trade with ID = %s", tradeID->s).c_str());
-    }
-    auto valuemap = mpRequestFactory->createValueMap();
-    valuemap->setString(Command, O2G2::Commands::CreateOrder);
-    valuemap->setString(OrderType, O2G2::Orders::TrueMarketClose);
-    valuemap->setString(AccountID, mAccountID.c_str());
-    valuemap->setString(OfferID, tradeRow->getOfferID());
-    valuemap->setString(TradeID, tradeID->s);
-    valuemap->setString(BuySell, (strcmp(tradeRow->getBuySell(), O2G2::Buy) == 0) ? O2G2::Sell : O2G2::Buy);
-    tradeRow->release();
-    valuemap->setInt(Amount, tradeRow->getAmount());
-    valuemap->setString(CustomID, "CloseMarketOrder");
+//    auto tableManager = getLoadedTableManager();
+//    auto tradesTable = static_cast<IO2GTradesTable*>(tableManager->getTable(Trades));
+//    IO2GTradeTableRow *tradeRow = nullptr;
+//    IO2GTableIterator tableIterator;
+//    while (tradesTable->getNextRow(tableIterator, tradeRow)) {
+//        if (strcmp(tradeID->s, tradeRow->getTradeID()) == 0)
+//            break;
+//    }
+//    if (!tradeRow) {
+//        R krr((S)string_format("Could not found trade with ID = %s", tradeID->s).c_str());
+//    }
+    auto valuemap = createValueMap(dict);
     auto request = mpRequestFactory->createOrderRequest(valuemap);
     if (!request) {
         R krr((S) mpRequestFactory->getLastError());
@@ -300,41 +285,58 @@ K ForexConnectClient::closePosition(K& tradeID)
     R krr((S) "Response waiting timeout expired");
 }
 
-K ForexConnectClient::getHistoricalPrices(const std::string &instrument,
-                                                            const DATE from,
-                                                            const DATE to,
-                                                            const std::string& timeFrame)
+K ForexConnectClient::getHistoricalPrices(K instrument, K from, K to, K timeFrame)
 {
-    K prices;
-    auto timeframeCollection = mpRequestFactory->getTimeFrameCollection();
-    auto timeframe = timeframeCollection->get(timeFrame.c_str());
+    Q(!(instrument->t == -KS &&
+        (from->t == -KZ || from->t == -KP) &&
+        (to->t == -KZ || to->t == -KP) &&
+        timeFrame->t == -KS), "type");
+    Q(!mIsConnected, "connection");
+    O2G2Ptr<IO2GTimeframeCollection> timeframeCollection = mpRequestFactory->getTimeFrameCollection();
+    O2G2Ptr<IO2GTimeframe> timeframe = timeframeCollection->get(timeFrame->s);
     Q(!timeframe, "Timeframe is incorrect");
     
-    auto request = mpRequestFactory->createMarketDataSnapshotRequestInstrument(instrument.c_str(), timeframe, timeframe->getQueryDepth());
-    DATE first = to;
+    O2G2Ptr<IO2GRequest> request = mpRequestFactory->createMarketDataSnapshotRequestInstrument(instrument->s, timeframe, timeframe->getQueryDepth());
+    K prices = knk(0);
+    DATE dtFrom = toOleTime(from);
+    DATE dtFirst = toOleTime(to);
     do
     {
-        mpRequestFactory->fillMarketDataSnapshotRequestTime(request, from, first, false);
+        mpRequestFactory->fillMarketDataSnapshotRequestTime(request, dtFrom, dtFirst, false);
         mpResponseListener->setRequestID(request->getRequestID());
         mpSession->sendRequest(request);
         Q(!mpResponseListener->waitEvents(), "Response waiting timeout expired");
         
         // shift "to" bound to oldest datetime of returned data
-        auto response = mpResponseListener->getResponse();
+        O2G2Ptr<IO2GResponse> response = mpResponseListener->getResponse();
         if (response && response->getType() == MarketDataSnapshot) {
-            auto reader = mpResponseReaderFactory->createMarketDataSnapshotReader(response);
+            O2G2Ptr<IO2GMarketDataSnapshotResponseReader> reader = mpResponseReaderFactory->createMarketDataSnapshotReader(response);
             Q(reader->size() == 0, "0 rows received");
-            if (fabs(first - reader->getDate(0)) <= 0.0001)
+            if (fabs(dtFirst - reader->getDate(0)) <= 0.0001)
                 break;
             
-            first = reader->getDate(0); // earliest datetime of return data
-            jk(&prices, getPricesFromResponse(response));
+            dtFirst = reader->getDate(0); // earliest datetime of return data
+            jv(&prices, getPricesFromResponse(response));
         } else {
             break;
         }
-    } while (first - from > 0.0001);
+    } while (dtFirst - dtFrom > 0.0001);
 
-    R prices;
+    K headers = ktn(KS, 10);
+    kS(headers)[0] = ss((S)"date");
+    kS(headers)[1] = ss((S)"bidopen");
+    kS(headers)[2] = ss((S)"bidhigh");
+    kS(headers)[3] = ss((S)"bidlow");
+    kS(headers)[4] = ss((S)"bidclose");
+    kS(headers)[5] = ss((S)"askopen");
+    kS(headers)[6] = ss((S)"askhigh");
+    kS(headers)[7] = ss((S)"asklow");
+    kS(headers)[8] = ss((S)"askclose");
+    kS(headers)[9] = ss((S)"volume");
+    
+    // TODO: Implement for ticks
+    
+    R xT(xD(headers, prices));
 }
 
 K ForexConnectClient::subscribeOffers(K& instrument)
@@ -343,12 +345,17 @@ K ForexConnectClient::subscribeOffers(K& instrument)
     Q(!mIsConnected, "connection");
     
     // Print current quotes
-    auto tableManager = getLoadedTableManager();
-    auto offers = (IO2GOffersTable *)tableManager->getTable(Offers);
-    mpTableListener->printOffers(offers, "");
+//    auto tableManager = getLoadedTableManager();
+//    auto offers = (IO2GOffersTable *)tableManager->getTable(Offers);
+//    mpTableListener->printOffers(offers, "");
+//    
+//    mpTableListener->setInstrument(instrument->s);
+//    mpTableListener->subscribeEvents(tableManager);
     
-    mpTableListener->setInstrument(instrument->s);
-    mpTableListener->subscribeEvents(tableManager);
+    
+    O2G2Ptr<IO2GRequest> offersRequest = mpRequestFactory->createRefreshTableRequest(Offers);
+    mpResponseListener->setRequestID(offersRequest->getRequestID());
+    mpSession->sendRequest(offersRequest);
     
     R 0;
 }
@@ -359,10 +366,18 @@ K ForexConnectClient::unsubscribeOffers(K x)
     R 0;
 }
 
-K ForexConnectClient::getservertime(K x)
+K ForexConnectClient::getServerTime(K x)
 {
     Q(!mIsConnected, "connection");
-    R kz(toKTime(mpSession->getServerTime()));
+    R toKTime(mpSession->getServerTime());
+}
+
+K ForexConnectClient::getBaseUnitSize(K instrument)
+{
+    Q(instrument->t != -KS, "type");
+    Q(!mIsConnected, "connection");
+    O2G2Ptr<IO2GTradingSettingsProvider> tradingSettingsProvider = mpLoginRules->getTradingSettingsProvider();
+    R kj(tradingSettingsProvider->getBaseUnitSize(instrument->s, mpAccountRow));
 }
 
 IO2GAccountTableRow* ForexConnectClient::getAccount()
@@ -408,43 +423,82 @@ K ForexConnectClient::getPricesFromResponse(IO2GResponse *response)
     
     O("Request with RequestID='%s' is completed:\n", response->getRequestID());
     
-    auto reader = mpResponseReaderFactory->createMarketDataSnapshotReader(response);
+    O2G2Ptr<IO2GMarketDataSnapshotResponseReader> reader = mpResponseReaderFactory->createMarketDataSnapshotReader(response);
     if (!reader) R 0;
     
     size_t nPrices = reader->size() - 1;
     
     if (reader->isBar()) {
-        K headers = vector_to_k_list(std::vector<std::string> {"date", "askopen", "askhigh", "asklow", "askclose"});
         K date = ktn(KZ, nPrices);
-        K open = ktn(KF, nPrices);
-        K high = ktn(KF, nPrices);
-        K low  = ktn(KF, nPrices);
-        K close = ktn(KF, nPrices);
+        K bidopen = ktn(KF, nPrices);
+        K bidhigh = ktn(KF, nPrices);
+        K bidlow  = ktn(KF, nPrices);
+        K bidclose = ktn(KF, nPrices);
+        K askopen = ktn(KF, nPrices);
+        K askhigh = ktn(KF, nPrices);
+        K asklow  = ktn(KF, nPrices);
+        K askclose = ktn(KF, nPrices);
         K volume = ktn(KJ, nPrices);
         
         DO(nPrices,
-           kF(date)[i] = reader->getDate(nPrices - i);
-           kF(open)[i] = reader->getAskOpen(nPrices - i);
-           kF(high)[i] = reader->getAskHigh(nPrices - i);
-           kF(low)[i] = reader->getAskLow(nPrices - i);
-           kF(close)[i] = reader->getAskClose(nPrices - i);
-           kF(volume)[i] = reader->getVolume(nPrices - i));
+           kF(date)[i] = toKTime(reader->getDate(nPrices - i))->f;
+           kF(bidopen)[i] = reader->getBidOpen(nPrices - i);
+           kF(bidhigh)[i] = reader->getBidHigh(nPrices - i);
+           kF(bidlow)[i] = reader->getBidLow(nPrices - i);
+           kF(bidclose)[i] = reader->getBidClose(nPrices - i);
+           kF(askopen)[i] = reader->getAskOpen(nPrices - i);
+           kF(askhigh)[i] = reader->getAskHigh(nPrices - i);
+           kF(asklow)[i] = reader->getAskLow(nPrices - i);
+           kF(askclose)[i] = reader->getAskClose(nPrices - i);
+           kJ(volume)[i] = reader->getVolume(nPrices - i));
         
-        R xT(xD(headers, knk(6, date, open, high, low, close, volume)));
+        R knk(10, date, bidopen, bidhigh, bidlow, bidclose, askopen, askhigh, asklow, askclose, volume);
     } else {
-        K headers = vector_to_k_list(std::vector<std::string> {"date", "ask" });
         K date = ktn(KZ, nPrices);
+        K bid  = ktn(KF, nPrices);
         K ask  = ktn(KF, nPrices);
         
         DO(nPrices,
-           kF(date)[i] = reader->getDate(nPrices - i);
+           kF(date)[i] = toKTime(reader->getDate(nPrices - i))->f;
+           kF(bid)[i] = reader->getBidOpen(nPrices - i);
            kF(ask)[i] = reader->getAskOpen(nPrices - i));
         
-        R xT(xD(headers, knk(2, date, ask)));
+        R knk(3, date, bid, ask);
     }
 }
 
-void ForexConnect::setLogLevel(int level)
+IO2GValueMap* ForexConnectClient::createValueMap(K &dict)
 {
-    O("Not implemented\n");
+    if (dict->t != 99) {
+        O("createValueMap only accepts dicts");
+        return nullptr;
+    }
+    
+    auto valuemap = mpRequestFactory->createValueMap();
+    auto keys = kK(dict)[0];
+    auto vals = kK(dict)[1];
+    O2GRequestParamsEnum key;
+    int type;
+    K val;
+    bool hasError = false;
+    
+    for (int i = 0; i < keys->n; i++) {
+        key = static_cast<O2GRequestParamsEnum>(kJ(keys)[i]);
+        val = kK(vals)[i];
+        type = val->t;
+        if (type == -KS || type == -KC) {
+            valuemap->setString(key, val->s);
+        } else if (type == -KI || type == -KJ) {
+            valuemap->setInt(key, val->j);
+        } else if (type == -KF) {
+            valuemap->setDouble(key, val->f);
+        } else if (type == -KB) {
+            valuemap->setBoolean(key, val->g);
+        } else {
+            O("Type %i not found for key %i\n", val->t, (int)key);
+            hasError = true;
+            break;
+        }
+    }
+    return hasError ? nullptr : valuemap;
 }

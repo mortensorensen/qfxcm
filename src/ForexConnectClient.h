@@ -6,7 +6,6 @@
 #include "stdafx.h"
 #include "SessionStatusListener.h"
 #include "ResponseListener.h"
-#include "Offer.h"
 #include "TableListener.h"
 
 namespace ForexConnect {
@@ -30,15 +29,13 @@ namespace ForexConnect {
         K getBid(K& instrument);
         K getAsk(K& instrument);
         K getTrades();
-        K openPosition(K& instrument, K& amount);
+        K openPosition(K& dict);
         K closePosition(K& tradeID);
-        K getHistoricalPrices(const std::string& instrument,
-                              const DATE from,
-                              const DATE to,
-                              const std::string &timeFrame = std::string("m1"));
+        K getHistoricalPrices(K instrument, K from, K to, K timeFrame);
         K subscribeOffers(K& instrument);
         K unsubscribeOffers(K x);
-        K getservertime(K x);
+        K getServerTime(K x);
+        K getBaseUnitSize(K instrument);
         
     private:
         IO2GSession* mpSession;
@@ -56,6 +53,7 @@ namespace ForexConnect {
         IO2GAccountTableRow* getAccount();
         IO2GTableManager* getLoadedTableManager();
         K getPricesFromResponse(IO2GResponse* response);
+        IO2GValueMap *createValueMap(K &dict);
         
         static bool findOfferRowBySymbol(IO2GOfferRow *row, std::string symbol)
         {
@@ -79,8 +77,6 @@ namespace ForexConnect {
             return readerFactory->createTradesTableReader(response);
         }
     };
-    
-    void setLogLevel(int level);
 }
 
 #endif

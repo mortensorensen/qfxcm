@@ -1,8 +1,5 @@
 #pragma once
 
-class Offer;
-class OfferCollection;
-
 class TableListener : public IO2GTableListener
 {
 public:
@@ -30,7 +27,6 @@ public:
 private:
     long mRefCount;
     std::string mInstrument;
-    OfferCollection *mOffers;
     
 protected:
     /** Destructor. */

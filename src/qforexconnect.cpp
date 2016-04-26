@@ -1,5 +1,6 @@
 #include "ForexConnectClient.h"
 #include "Helpers.h"
+#include "print.cpp"
 
 //using namespace ForexConnect;
 
@@ -63,9 +64,9 @@ extern "C"
     K getBid(K instrument) { R client->getBid(instrument); }
     K getAsk(K instrument) { R client->getAsk(instrument); }
     
-    K openPosition(K instrument, K amount)
+    K openPosition(K dict)
     {
-        R client->openPosition(instrument, amount);
+        R client->openPosition(dict);
     }
     
     K closePosition(K tradeID)
@@ -76,15 +77,25 @@ extern "C"
     
     K getHistoricalPrices(K instrument, K begin, K end, K timeframe)
     {
-        Q(instrument->t != -KS || begin->t != -KD || end->t != -KD || timeframe->t != -KS, "type");
-        R client->getHistoricalPrices(instrument->s,
-                                      toCOleTime(begin),
-                                      toCOleTime(end),
-                                      timeframe->s);
+        R client->getHistoricalPrices(instrument, begin, end, timeframe);
     }
     K subscribeOffers(K instrument) { R client->subscribeOffers(instrument); }
     K unsubscribeOffers(K x) { R client->unsubscribeOffers(x); }
-    K getServerTime(K x) { R client->getservertime(x); }
+    K getServerTime(K x) { R client->getServerTime(x); }
+    K getBaseUnitSize(K x) { R client->getBaseUnitSize(x); }
+    
+    K testdict(K x) {
+        K keys = kK(x)[0];
+        K vals = kK(x)[1];
+
+        for (int i = 0; i < keys->n; i++) {
+            O("key: %lli, type: %hhi value: %s\n",
+                kJ(keys)[i],
+                kK(vals)[i]->t,
+                kS(vals)[i]);
+        }
+        R 0;
+    }
 }
 
 
@@ -99,7 +110,7 @@ K LoadLibrary(K x)
     O("git commit » %-5s\n",            BUILD_GIT_SHA1);
     O("git commit datetime » %-5s\n",   BUILD_GIT_DATE);
     O("kdb compatibility » %s.x\n",     BUILD_KX_VER);
-    O("compiler flags »%-5s\n",        BUILD_COMPILER_FLAGS);
+    O("compiler flags »%-5s\n",         BUILD_COMPILER_FLAGS);
     O("\n");
     
     auto map = std::map<const char*, std::pair<void*, unsigned short> > {
@@ -114,12 +125,14 @@ K LoadLibrary(K x)
         { "getbid",         { (void*)getBid,            1 } },
         { "getask",         { (void*)getAsk,            1 } },
         { "gettrades",      { (void*)getTrades,         1 } },
-        { "openposition",   { (void*)openPosition,      2 } },
+        { "openposition",   { (void*)openPosition,      1 } },
         { "closeposition",  { (void*)closePosition,     1 } },
         { "gethistprices",  { (void*)getHistoricalPrices,  4 } },
         { "subscribeoffers",   { (void*)subscribeOffers,   1 } },
         { "unsubscribeoffers", { (void*)unsubscribeOffers, 1 } },
-        { "getservertime",  { (void*)getServerTime,     1 } }
+        { "getservertime",  { (void*)getServerTime,     1 } },
+        { "getbaseunitsize",   { (void*)getServerTime,     1 } },
+        { "testdict",   { (void*)testdict,     1 } }
     };
     
     K keys = ktn(KS, 0);

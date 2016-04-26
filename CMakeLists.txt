@@ -23,7 +23,8 @@ set (CMAKE_BINARY_DIR "${CMAKE_SOURCE_DIR}/bin")
 
 file (GLOB_RECURSE QFXCM_SRC
   "${CMAKE_SOURCE_DIR}/src/*.h"
-  "${CMAKE_SOURCE_DIR}/src/*.cpp")
+  "${CMAKE_SOURCE_DIR}/src/*.cpp"
+  "${CMAKE_SOURCE_DIR}/src/*.c")
 
 add_library (${BINARY_NAME} SHARED ${QFXCM_SRC})
 # add_library (${BINARY_NAME} SHARED "third_party/kx/k.h" "src/stdafx.h" "src/Helpers.h" "src/qforexconnect.cpp")

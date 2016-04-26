@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "Offer.h"
 #include "TableListener.h"
 #include "Helpers.h"
 
@@ -7,12 +6,10 @@ TableListener::TableListener()
 {
     mRefCount = 1;
     mInstrument = "";
-    mOffers = new OfferCollection();
 }
 
 TableListener::~TableListener(void)
 {
-    delete mOffers;
 }
 
 long TableListener::addRef()
@@ -70,7 +67,7 @@ void TableListener::printOffer(IO2GOfferTableRow *offerRow, const char *sInstrum
         return;
 
     K tick = knk(4,
-                 kz(toKTime(offerRow->getTime())),
+                 toKTime(offerRow->getTime()),
                  ks((S)offerRow->getInstrument()),
                  kf(offerRow->getBid()),
                  kf(offerRow->getAsk()));
