@@ -285,7 +285,7 @@ K ForexConnectClient::closePosition(K& dict)
     R krr((S) "Response waiting timeout expired");
 }
 
-K ForexConnectClient::getHistoricalPrices(K instrument, K from, K to, K timeFrame)
+K ForexConnectClient::getHistoricalPrices(K& instrument, K& from, K& to, K& timeFrame)
 {
     Q(!(instrument->t == -KS &&
         (from->t == -KZ || from->t == -KP) &&

@@ -1,23 +1,36 @@
 system"l /Users/morten/Sandbox/algotrading/fxcm/qfxcm/qfxcm.q"
 
 args:.Q.opt .z.x
-host:`$"http://www.fxcorporate.com/Hosts.jsp"
 user:first `$args[`user]
 pass:first `$args[`pass]
 connection:`Demo
+host:`$"http://www.fxcorporate.com/Hosts.jsp"
 
-instrument:`$"EUR/USD"
+.fxcm.setloginparams[user;pass;connection;host]
+
+instrument:`$"USD/JPY"
 begin:`datetime$2016.04.01
 end:`datetime$.z.d
-timeframe:`M1
+timeframe:`H1
 amount:100
 
-// debug
-.fxcm.login[user;pass;connection;host]
-/ .fxcm.subscribeoffers[`$"EUR/USD"]
-/ show t:.fxcm.gethistprices[sym;begin;end;timeframe]
+/ .fxcm.version[]
+.fxcm.connect[]
+/ .fxcm.disconnect[]
+/ .fxcm.isconnected[]
+/ .fxcm.getaccountid[]
+/ .fxcm.getusedmargin[]
+/ .fxcm.getbalance[]
 / .fxcm.getoffers[]
-/ show .fxcm.testoletime[`datetime$.z.d]
+/ .fxcm.getbid[instrument]
+/ .fxcm.getask[instrument]
+/ .fxcm.gettrades[]
+/ .fxcm.getservertime[]
+/ .fxcm.getbaseunitsize[instrument]
+/ .fxcm.gethistprices[instrument;begin;end;timeframe]
+/ .fxcm.truemarketopen[instrument;amount]
+.fxcm.subscribeoffers[instrument]
+
 
 / select from t
 / .fxcm.gettrades[]
@@ -25,7 +38,7 @@ amount:100
 / .fxcm.getoffers[]
 
 
-.fxcm.truemarketopen[instrument;amount]
+/ .fxcm.truemarketopen[instrument;amount]
 
 / .fxcm.testdict[1 2 3!4 5 6]
 

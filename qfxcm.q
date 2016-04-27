@@ -22,11 +22,10 @@ system"l ",getenv[`QFXCMROOT],"/tags.q"
 	order[.fxcm.params.OrderType]: .fxcm.orders.TrueMarketOpen;
 	order[.fxcm.params.OfferID]: .fxcm.getofferid[instrument];
 	order[.fxcm.params.BuySell]: $[amount>0;.fxcm.Buy;.fxcm.Sell];
-	order[.fxcm.params.Amount]: amount; / * .fxcm.getbaseunitsize[instrument];
-	/ order[.fxcm.params.Amount]: 100;
+	order[.fxcm.params.Amount]: amount * .fxcm.getbaseunitsize[instrument];
 	order[.fxcm.params.TimeInForce]: .fxcm.tif.IOC;
 	order[.fxcm.params.CustomID]: `TrueMarketOrder;
-	.fxcm.openposition[order _(::)]
+	.fxcm.sendorder[order _(::)]
  }
 
 .fxcm.truemarketclose:{[tradeid]
@@ -37,7 +36,7 @@ system"l ",getenv[`QFXCMROOT],"/tags.q"
 	order[.fxcm.params.BuySell]: 1;
 	order[.fxcm.params.Amount]: 1;
 	order[.fxcm.params.CustomID]: `TrueMarketClose;
-	.fxcm.openposition[order _(::)]
+	.fxcm.sendorder[order _(::)]
  }
 
 out:{-1(string .z.Z)," ",x;}
