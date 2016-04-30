@@ -1,1 +1,0 @@
-testq qfxcm.q qfxcm_test.q
