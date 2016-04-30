@@ -29,8 +29,9 @@ amount:100
 / .fxcm.getbaseunitsize[instrument]
 / .fxcm.gethistprices[instrument;begin;end;timeframe]
 / .fxcm.truemarketopen[instrument;amount]
-.fxcm.subscribeoffers[instrument]
-
+/ .fxcm.subscribeoffers[instrument]
+/ .fxcm.unsubscribeoffers[]
+.fxcm.unsub `$"AUD/CAD"
 
 / select from t
 / .fxcm.gettrades[]

@@ -6,7 +6,7 @@
 #include "Helpers.h"
 #include "Offer.h"
 
-ResponseListener::ResponseListener(IO2GSession *session)
+ResponseListener::ResponseListener(IO2GSession *session, int sockets[])
 {
     mSession = session;
     mSession->addRef();
@@ -16,6 +16,7 @@ ResponseListener::ResponseListener(IO2GSession *session)
     mOrderID = "";
     mResponse = NULL;
     std::cout.precision(2);
+    mSockets = sockets;
 }
 
 ResponseListener::~ResponseListener()
@@ -112,48 +113,37 @@ void ResponseListener::onTablesUpdates(IO2GResponse *data)
 
 void ResponseListener::onOffers(IO2GSession *session, IO2GResponse *response, const char *sInstrument)
 {
-    auto readerFactory = session->getResponseReaderFactory();
+    O2G2Ptr<IO2GResponseReaderFactory> readerFactory = session->getResponseReaderFactory();
     if (!readerFactory)
-        O("failed to create reader factory\n"); R;
+    {
+        O("failed to create reader factory\n");
+        return;
+    }
     
-    // to bulk insert instead
-    O("on offer ...\n");
+    O2G2Ptr<IO2GOffersTableResponseReader> offersResponseReader = readerFactory->createOffersTableReader(response);
+    if (!offersResponseReader) return;
+
+//    K vals = knk(0);
+    K vals;
     
-    auto offersResponseReader = readerFactory->createOffersTableReader(response);
-    if (!offersResponseReader) {
-        for (uint i = 0;i < offersResponseReader->size(); ++i) {
-            auto offerRow = offersResponseReader->getRow(i);
-            Offer *offer = mOffers->findOffer(offerRow->getOfferID());
-            if (offer) {
-                if (offerRow->isTimeValid() && offerRow->isBidValid() && offerRow->isAskValid()) {
-                    offer->setDate(offerRow->getTime());
-                    offer->setBid(offerRow->getBid());
-                    offer->setAsk(offerRow->getAsk());
-                }
-            } else {
-                offer = new Offer(offerRow->getOfferID(), offerRow->getInstrument(),
-                                  offerRow->getDigits(), offerRow->getPointSize(),
-                                  offerRow->getTime(), offerRow->getBid(), offerRow->getAsk());
-                mOffers->addOffer(offer);
-            }
-            if (!sInstrument || strlen(sInstrument) == 0 || strcmp(offerRow->getInstrument(), sInstrument) == 0) {
-                K keys = ktn(KS, 4);
-                kS(keys)[0] = ss((S) "Date");
-                kS(keys)[1] = ss((S) "Symbol");
-                kS(keys)[2] = ss((S) "Bid");
-                kS(keys)[3] = ss((S) "Ask");
-                
-                K vals = knk(4,
-                             toKTime(offer->getDate()),
-                             ss((S) offer->getInstrument()),
-                             offer->getBid(),
-                             offer->getAsk());
-                
-//                consumeEvent("onoffer", xD(keys, vals));
-                O("ResponseListener: onoffer\n");
-            }
+    for (int i = 0; i < offersResponseReader->size(); ++i) {
+        O2G2Ptr<IO2GOfferRow> offerRow = offersResponseReader->getRow(i);
+        if (offerRow->isTimeValid() && offerRow->isBidValid() && offerRow->isAskValid()) {
+//            jv(&vals, knk(4,
+//                          toKTime(offerRow->getTime()),
+//                          ks((S) offerRow->getInstrument()),
+//                          kf(offerRow->getBid()),
+//                          kf(offerRow->getAsk())));
+            vals = knk(4,
+                          toKTime(offerRow->getTime()),
+                          ks((S) offerRow->getInstrument()),
+                          kf(offerRow->getBid()),
+                          kf(offerRow->getAsk()));
+            writeToSocket(mSockets, "onoffer", vals);
         }
     }
+    
+//    writeToSocket(mSockets, "onoffer", vals);
 }
 
 void ResponseListener::onLevel2MarketData(IO2GSession *session, IO2GResponse *response, const char *sInstrument)
@@ -163,15 +153,14 @@ void ResponseListener::onLevel2MarketData(IO2GSession *session, IO2GResponse *re
         O("failed to create reader factory\n"); R;
     
     auto lvl2ResponseReader = readerFactory->createLevel2MarketDataReader(response);
-    if (lvl2ResponseReader != NULL) {
-        for (I i = 0, ii = lvl2ResponseReader->getPriceQuotesCount(); i < ii; ++i) {
+    if (lvl2ResponseReader) {
+        for (int i = 0, ii = lvl2ResponseReader->getPriceQuotesCount(); i < ii; ++i) {
             // todo...
-            for (I j = 0, jj = lvl2ResponseReader->getPricesCount(i); j < jj; ++j) {
+            for (int j = 0, jj = lvl2ResponseReader->getPricesCount(i); j < jj; ++j) {
                 // todo...
             }
         }
     }
     
-//    consumeEvent("onlevel2data", 0);
     O("ResponseListener: onlevel2\n");
 }

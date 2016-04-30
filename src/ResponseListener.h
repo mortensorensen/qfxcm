@@ -8,7 +8,7 @@ class OfferCollection;
 class ResponseListener : public IO2GResponseListener
 {
  public:
-    ResponseListener(IO2GSession *session);
+    ResponseListener(IO2GSession *session, int sockets[]);
 
     /** Increase reference counter. */
     virtual long addRef();
@@ -41,6 +41,8 @@ class ResponseListener : public IO2GResponseListener
     void onOffers(IO2GSession *session, IO2GResponse *response, const char *sInstrument);
     void onLevel2MarketData(IO2GSession *session, IO2GResponse *response, const char *sInstrument);
     
+    
+    
  private:
     long mRefCount;
     /** Session object. */
@@ -58,6 +60,8 @@ class ResponseListener : public IO2GResponseListener
     IO2GResponse *mResponse;
     
     OfferCollection *mOffers;
+    
+    int *mSockets;
 
  protected:
     /** Destructor. */

@@ -35,7 +35,7 @@ public:
                                 no subsession selector is expected.
         @param pin              Pin code or NULL in case no pin code request is expected.
     */
-    SessionStatusListener(IO2GSession *session, bool printSubsessions, const char *sessionID = 0, const char *pin = 0);
+    SessionStatusListener(IO2GSession *session, bool printSubsessions, const char *sessionID = 0, const char *pin = 0, int sockets[] = nullptr);
 
     /** Increase reference counter. */
     virtual long addRef();
@@ -63,6 +63,8 @@ public:
 
     /** Wait for connection or error. */
     bool waitEvents();
+    
+    int *mSockets;
 
 };
 

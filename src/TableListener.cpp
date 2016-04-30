@@ -43,12 +43,14 @@ void TableListener::onChanged(const char *rowID, IO2GRow *row)
 
 void TableListener::onDeleted(const char *rowID, IO2GRow *row)
 {
-    consumeEvent("ondeleted", ks((S)rowID));
+//    consumeEvent("ondeleted", ks((S)rowID));
+    O("Table Listener: ondeleted\n");
 }
 
 void TableListener::onStatusChanged(O2GTableStatus status)
 {
-    consumeEvent("onstatuschanged", ki(status));
+//    consumeEvent("onstatuschanged", ki(status));
+    O("Table Listener: onstatuschanged\n");
 }
 
 void TableListener::printOffers(IO2GOffersTable *offersTable, const char *sInstrument)
@@ -63,15 +65,16 @@ void TableListener::printOffers(IO2GOffersTable *offersTable, const char *sInstr
 
 void TableListener::printOffer(IO2GOfferTableRow *offerRow, const char *sInstrument)
 {
-    if(!(offerRow->isTimeValid() && offerRow->isBidValid() && offerRow->isAskValid()))
-        return;
-
-    K tick = knk(4,
-                 toKTime(offerRow->getTime()),
-                 ks((S)offerRow->getInstrument()),
-                 kf(offerRow->getBid()),
-                 kf(offerRow->getAsk()));
-    consumeEvent("onoffer", tick);
+//    if(!(offerRow->isTimeValid() && offerRow->isBidValid() && offerRow->isAskValid()))
+//        return;
+//
+//    K tick = knk(4,
+//                 toKTime(offerRow->getTime()),
+//                 ks((S)offerRow->getInstrument()),
+//                 kf(offerRow->getBid()),
+//                 kf(offerRow->getAsk()));
+//    consumeEvent("onoffer", tick);
+    O("Table Listener: printoffer\n");
 }
 
 void TableListener::subscribeEvents(IO2GTableManager *manager)

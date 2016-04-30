@@ -7,7 +7,8 @@
 SessionStatusListener::SessionStatusListener(IO2GSession *session,
                                              bool printSubsessions,
                                              const char *sessionID,
-                                             const char *pin)
+                                             const char *pin,
+                                             int sockets[])
 {
     mSessionID = sessionID != 0 ? sessionID : "";
     mPin = pin != 0 ? pin : "";
@@ -17,6 +18,10 @@ SessionStatusListener::SessionStatusListener(IO2GSession *session,
     mPrintSubsessions = printSubsessions;
     mRefCount = 1;
     mSessionEvent = CreateEvent(0, FALSE, FALSE, 0);
+    if (!sockets)
+        throw;
+    else
+        mSockets = sockets;
 }
 
 /** Destructor. */
@@ -53,7 +58,8 @@ void SessionStatusListener::reset()
 /** Callback called when login has been failed. */
 void SessionStatusListener::onLoginFailed(const char *error)
 {
-    consumeEvent("loginfailed", kp((S)error));
+    writeToSocket(mSockets, "loginfailed");
+//    consumeEvent("loginfailed", kp((S)error));
     mError = true;
 }
 
@@ -62,16 +68,16 @@ void SessionStatusListener::onSessionStatusChanged(IO2GSessionStatus::O2GSession
 {
     switch (status) {
         case IO2GSessionStatus::Disconnected:
-            consumeEvent("disconnected");
+            writeToSocket(mSockets, "disconnected");
             mConnected = false;
             mDisconnected = true;
             SetEvent(mSessionEvent);
             break;
         case IO2GSessionStatus::Connecting:
-            consumeEvent("connecting");
+            writeToSocket(mSockets, "connecting");
             break;
         case IO2GSessionStatus::TradingSessionRequested: {
-            consumeEvent("tradingsessionrequested");
+            writeToSocket(mSockets, "tradingsessionrequested");
             O2G2Ptr<IO2GSessionDescriptorCollection> descriptors =
                 mSession->getTradingSessionDescriptors();
             bool found = false;
@@ -102,19 +108,19 @@ void SessionStatusListener::onSessionStatusChanged(IO2GSessionStatus::O2GSession
                 mSession->setTradingSession(mSessionID.c_str(), mPin.c_str());
         } break;
         case IO2GSessionStatus::Connected:
-            consumeEvent("connected");
+            writeToSocket(mSockets, "connected");
             mConnected = true;
             mDisconnected = false;
             SetEvent(mSessionEvent);
             break;
         case IO2GSessionStatus::Reconnecting:
-            consumeEvent("reconnecting");
+            writeToSocket(mSockets, "reconnecting");
             break;
         case IO2GSessionStatus::Disconnecting:
-            consumeEvent("disconnecting");
+            writeToSocket(mSockets, "disconnecting");
             break;
         case IO2GSessionStatus::SessionLost:
-            consumeEvent("sessionlost");
+            writeToSocket(mSockets, "sessionlost");
             mSession->unsubscribeSessionStatus(this);
             release();
             mSession->release();

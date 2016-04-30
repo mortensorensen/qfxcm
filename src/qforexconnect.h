@@ -24,11 +24,12 @@ struct LoginParams
 
 extern "C"
 {
+    K receiveData(I x);
     K version(K x);
     K LoadLibrary(K x);
     K setLoginParams(K login, K password, K connection, K url);
-    K connect(K x);
-    K disconnect(K x);
+    K login(K x);
+    K logout(K x);
     K isConnected(K x);
     K getAccountId(K x);
     K getUsedMargin(K x);
@@ -37,7 +38,7 @@ extern "C"
     K getTrades(K x);
     K getBid(K instrument);
     K getAsk(K instrument);
-    K sendOrder(K dict);
+    K sendMessage(K dict);
     K getHistoricalPrices(K instrument, K begin, K end, K timeframe);
     K subscribeOffers(K instrument);
     K unsubscribeOffers(K x);
@@ -49,6 +50,6 @@ static std::map<std::string, std::string> getOffersMap();
 static IO2GAccountTableRow* getAccount();
 static IO2GTableManager* getLoadedTableManager();
 static K getPricesFromResponse(IO2GResponse *response);
-static IO2GValueMap* createValueMap(K &dict);
+static IO2GValueMap* convertToValueMap(K dict, const char *&error);
 
 #endif

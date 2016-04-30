@@ -1,5 +1,6 @@
 #include "qforexconnect.h"
 #include "Helpers.h"
+#include <sstream>
 
 IO2GSession* mpSession;
 SessionStatusListener* mpListener;
@@ -12,17 +13,22 @@ std::string mAccountID;
 TableListener* mpTableListener;
 LoginParams* loginParams;
 
+int sockets[2];
+
 // TODO: Implement MSVC equivalent
 __attribute__((constructor))
 static void initialize_api() {
     mpSession = CO2GTransport::createSession();
-    mpListener = new SessionStatusListener(mpSession, false, "", "");
+    mpListener = new SessionStatusListener(mpSession, false, "", "", sockets);
     mpSession->subscribeSessionStatus(mpListener);
     mpSession->useTableManager(Yes, 0);
     
-    mpResponseListener = new ResponseListener(mpSession);
+    mpResponseListener = new ResponseListener(mpSession, sockets);
     mpSession->subscribeResponse(mpResponseListener);
     loginParams = new LoginParams();
+    
+    dumb_socketpair(sockets, 0);
+    sd1(sockets[1], receiveData);
 }
 
 __attribute__((destructor))
@@ -32,11 +38,36 @@ static void destroy_api() {
     if (mpLoginRules) mpLoginRules->release();
     if (mpResponseReaderFactory) mpResponseReaderFactory->release();
     if (mpResponseListener) mpResponseListener->release();
-    if (mpListener->isConnected()) disconnect((K)0);
+    if (mpListener->isConnected()) logout((K)0);
     mpSession->unsubscribeSessionStatus(mpListener);
     mpListener->release();
     mpSession->release();
     delete loginParams;
+}
+
+static inline void readBytes(int numbytes, char (*buf)[4096])
+{
+    int total = 0;
+    do { total += recv(sockets[1], &buf[total], numbytes - total, 0); } while (total < numbytes);
+}
+
+K receiveData(I x)
+{
+    static char buf[4096];
+    J size = 0;
+    
+    readBytes(sizeof(J), &buf);
+    memcpy(&size, buf, sizeof(J));
+    
+    K bytes = ktn(KG, size);
+    
+    readBytes(size, &buf);
+    memcpy(kG(bytes), &buf, (size_t)size);
+    K r = k(0, (S)".fxcm.onrecv . ", d9(bytes), (K)0);
+    r0(bytes);
+    r0(r);
+    
+    R (K)0;
 }
 
 K version(K x)
@@ -73,8 +104,8 @@ K LoadLibrary(K x)
     auto map = std::map<const char*, std::pair<void*, unsigned short> > {
         { "version",        { (void*)version,           1 } },
         { "setloginparams", { (void*)setLoginParams,    4 } },
-        { "connect",        { (void*)connect,           1 } },
-        { "disconnect",     { (void*)disconnect,        1 } },
+        { "connect",        { (void*)login,             1 } },
+        { "disconnect",     { (void*)logout,            1 } },
         { "isconnected",    { (void*)isConnected,       1 } },
         { "getaccountid",   { (void*)getAccountId,      1 } },
         { "getusedmargin",  { (void*)getUsedMargin,     1 } },
@@ -83,7 +114,7 @@ K LoadLibrary(K x)
         { "getbid",         { (void*)getBid,            1 } },
         { "getask",         { (void*)getAsk,            1 } },
         { "gettrades",      { (void*)getTrades,         1 } },
-        { "sendorder",      { (void*)sendOrder,         1 } },
+        { "send",           { (void*)sendMessage,       1 } },
         { "gethistprices",  { (void*)getHistoricalPrices,  4 } },
         { "subscribeoffers",   { (void*)subscribeOffers,   1 } },
         { "unsubscribeoffers", { (void*)unsubscribeOffers, 1 } },
@@ -124,7 +155,7 @@ K setLoginParams(K login, K password, K connection, K url)
     R 0;
 }
 
-K connect(K x)
+K login(K x)
 {
     Q(!loginParams->areSet(), "login params not set");
     Q(mpListener->isConnected(), "already connected");
@@ -153,15 +184,14 @@ K connect(K x)
     mpAccountRow = accountsResponseReader->getRow(0);
     mAccountID = mpAccountRow->getAccountID();
     
-    mpResponseListener = new ResponseListener(mpSession);
-    mpSession->subscribeResponse(mpResponseListener);
+//    mpSession->subscribeResponse(mpResponseListener);
     
     mpRequestFactory = mpSession->getRequestFactory();
     
     R 0;
 }
 
-K disconnect(K x)
+K logout(K x)
 {
     if (!mpListener->isConnected()) {
         O("already logged out\n");
@@ -181,21 +211,21 @@ K isConnected(K x)
 K getAccountId(K x)
 {
     if (!mpListener->isConnected())
-        connect((K)0);
+        login((K)0);
     R ks((S)mpAccountRow->getAccountID());
 }
 
 K getUsedMargin(K x)
 {
     if (!mpListener->isConnected())
-        connect((K)0);
+        login((K)0);
     R kf(mpAccountRow->getUsedMargin());
 }
 
 K getBalance(K x)
 {
     if (!mpListener->isConnected())
-        connect((K)0);
+        login((K)0);
     auto account = getAccount();
     R kf((!account) ? mpAccountRow->getBalance() : account->getBalance());
 }
@@ -216,7 +246,7 @@ K getBid(K instrument)
 {
     Q(instrument->t != -KS, "type");
     if (!mpListener->isConnected())
-        connect((K)0);
+        login((K)0);
     auto tableManager = getLoadedTableManager();
     auto offersTable = static_cast<IO2GOffersTable*>(tableManager->getTable(Offers));
     IO2GOfferTableRow *offerRow = nullptr;
@@ -236,7 +266,7 @@ K getAsk(K instrument)
 {
     Q(instrument->t != -KS, "type");
     if (!mpListener->isConnected())
-        connect((K)0);
+        login((K)0);
     auto tableManager = getLoadedTableManager();
     auto offersTable = static_cast<IO2GOffersTable*>(tableManager->getTable(Offers));
     IO2GOfferTableRow *offerRow = nullptr;
@@ -255,7 +285,7 @@ K getAsk(K instrument)
 K getTrades(K x)
 {
     if (!mpListener->isConnected())
-        connect(x);
+        login(x);
     auto tableManager = getLoadedTableManager();
     auto tradesTable = static_cast<IO2GTradesTable*>(tableManager->getTable(Trades));
     IO2GTradeTableRow* tradeRow = nullptr;
@@ -333,32 +363,36 @@ K getTrades(K x)
 //    R krr((S) "Response waiting timeout expired");
 //}
 
-K sendOrder(K dict)
+K sendMessage(K dict)
 {
     if (!mpListener->isConnected())
-        connect((K)0);
-    auto valuemap = createValueMap(dict);
+        login((K)0);
+    const char* errorMsg = nullptr;
+    auto valuemap = convertToValueMap(r1(dict), errorMsg);
+    r0(dict);
+    Q(!valuemap, errorMsg);
     auto request = mpRequestFactory->createOrderRequest(valuemap);
     Q(!request, mpRequestFactory->getLastError());
     
     mpResponseListener->setRequestID(request->getRequestID());
     mpSession->sendRequest(request);
-    if (mpResponseListener->waitEvents()) {
-        Sleep(1000); // Wait for the balance update
-        O("Order placed\n");
-        R kb(true);
-    }
-    R krr((S) "Response waiting timeout expired");
+    Q(!mpResponseListener->waitEvents(), "Response waiting timeout expired");
+    
+    Sleep(1000); // Wait for the balance update
+    O("Message sent\n");
+    R kb(true);
 }
 
 K getHistoricalPrices(K instrument, K from, K to, K timeFrame)
 {
+    // TODO: Make async
+    
     Q(!(instrument->t == -KS &&
         (from->t == -KZ || from->t == -KP) &&
         (to->t == -KZ || to->t == -KP) &&
         timeFrame->t == -KS), "type");
     if (!mpListener->isConnected())
-        connect((K)0);
+        login((K)0);
     O2G2Ptr<IO2GTimeframeCollection> timeframeCollection = mpRequestFactory->getTimeFrameCollection();
     O2G2Ptr<IO2GTimeframe> timeframe = timeframeCollection->get(timeFrame->s);
     Q(!timeframe, "Timeframe is incorrect");
@@ -402,7 +436,7 @@ K subscribeOffers(K instrument)
 {
     Q(instrument->t != -KS, "type");
     if (!mpListener->isConnected())
-        connect((K)0);
+        login((K)0);
     
     // Print current quotes
     //    auto tableManager = getLoadedTableManager();
@@ -423,7 +457,7 @@ K subscribeOffers(K instrument)
 K unsubscribeOffers(K x)
 {
     if (!mpListener->isConnected())
-        connect((K)0);
+        login((K)0);
     mpTableListener->unsubscribeEvents(getLoadedTableManager());
     R 0;
 }
@@ -431,7 +465,7 @@ K unsubscribeOffers(K x)
 K getServerTime(K x)
 {
     if (!mpListener->isConnected())
-        connect((K)0);
+        login((K)0);
     R toKTime(mpSession->getServerTime());
 }
 
@@ -439,7 +473,7 @@ K getBaseUnitSize(K instrument)
 {
     Q(instrument->t != -KS, "type");
     if (!mpListener->isConnected())
-        connect((K)0);
+        login((K)0);
     O2G2Ptr<IO2GTradingSettingsProvider> tradingSettingsProvider = mpLoginRules->getTradingSettingsProvider();
     int baseUnitSize = tradingSettingsProvider->getBaseUnitSize(instrument->s, mpAccountRow);
     Q(baseUnitSize == -1, "instrument");
@@ -547,7 +581,7 @@ static K getPricesFromResponse(IO2GResponse *response)
     }
 }
 
-static IO2GValueMap* createValueMap(K &dict)
+static IO2GValueMap* convertToValueMap(K dict, const char *&error)
 {
     if (dict->t != 99) {
         O("createValueMap only accepts dicts");
@@ -575,9 +609,11 @@ static IO2GValueMap* createValueMap(K &dict)
         } else if (type == -KB) {
             valuemap->setBoolean(key, val->g);
         } else {
-            O("Type %i not recognized for key %i\n", val->t, (int)key);
-            hasError = true;
-            break;
+            std::stringstream ss;
+            ss << "Type " << val->t << " not recognized for key " << (int)key;
+            error = ss.str().c_str();
+//            hasError = true;
+//            break;
         }
     }
     return hasError ? nullptr : valuemap;
