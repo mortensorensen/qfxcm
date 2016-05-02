@@ -80,6 +80,7 @@ std::string ResponseListener::getOrderID()
 /** Request execution completed data handler. */
 void ResponseListener::onRequestCompleted(const char *requestId, IO2GResponse *response)
 {
+    // TODO: Add callback here
     if (response && mRequestID == requestId)
     {
         mResponse = response;
@@ -102,18 +103,26 @@ void ResponseListener::onRequestFailed(const char *requestId , const char *error
 /** Request update data received data handler. */
 void ResponseListener::onTablesUpdates(IO2GResponse *data)
 {
-    if (data) {
-        if (data->getType() == TablesUpdates) {
-            onOffers(mSession, data, mInstrument.c_str());
-        } else if (data->getType() == Level2MarketData) {
-            onLevel2MarketData(mSession, data, mInstrument.c_str());
-        }
+    if (!data) return;
+    
+    switch (data->getType()) {
+        case TablesUpdates:         onOffers(data);             break;
+        case Level2MarketData:      onLevel2MarketData(data);   break;
+        case GetAccounts:           onAccounts(data);           break;
+        case GetTrades:             onTrades(data);             break;
+        case GetOrders:             onOrders(data);             break;
+        case GetClosedTrades:       onClosedTrades(data);       break;
+        case GetMessages:           onMessages(data);           break;
+        case GetLastOrderUpdate:    onLastOrderUpdate(data);    break;
+        case GetSystemProperties:   onSystemProperties(data);   break;
+        case MarginRequirementsResponse: onMarginRequirements(data); break;
+        default: O("onTablesUpdates: Type: %i unknown\n", data->getType());
     }
 }
 
-void ResponseListener::onOffers(IO2GSession *session, IO2GResponse *response, const char *sInstrument)
+void ResponseListener::onOffers(IO2GResponse *response)
 {
-    O2G2Ptr<IO2GResponseReaderFactory> readerFactory = session->getResponseReaderFactory();
+    O2G2Ptr<IO2GResponseReaderFactory> readerFactory = mSession->getResponseReaderFactory();
     if (!readerFactory)
     {
         O("failed to create reader factory\n");
@@ -146,9 +155,9 @@ void ResponseListener::onOffers(IO2GSession *session, IO2GResponse *response, co
 //    writeToSocket(mSockets, "onoffer", vals);
 }
 
-void ResponseListener::onLevel2MarketData(IO2GSession *session, IO2GResponse *response, const char *sInstrument)
+void ResponseListener::onLevel2MarketData(IO2GResponse *response)
 {
-    auto readerFactory = session->getResponseReaderFactory();
+    auto readerFactory = mSession->getResponseReaderFactory();
     if (!readerFactory)
         O("failed to create reader factory\n"); R;
     
@@ -163,4 +172,44 @@ void ResponseListener::onLevel2MarketData(IO2GSession *session, IO2GResponse *re
     }
     
     O("ResponseListener: onlevel2\n");
+}
+
+void ResponseListener::onAccounts(IO2GResponse *response)
+{
+    O("ResponseListener: onAccounts\n");
+}
+
+void ResponseListener::onTrades(IO2GResponse *response)
+{
+    O("ResponseListener: onTrades\n");
+}
+
+void ResponseListener::onOrders(IO2GResponse *response)
+{
+    O("ResponseListener: onOrders\n");
+}
+
+void ResponseListener::onClosedTrades(IO2GResponse *response)
+{
+    O("ResponseListener: onClosedTrades\n");
+}
+
+void ResponseListener::onMessages(IO2GResponse *response)
+{
+    O("ResponseListener: onMessages\n");
+}
+
+void ResponseListener::onLastOrderUpdate(IO2GResponse *response)
+{
+    O("ResponseListener: onLastOrderProperties\n");
+}
+
+void ResponseListener::onSystemProperties(IO2GResponse *response)
+{
+    O("ResponseListener: onSystemProperties\n");
+}
+
+void ResponseListener::onMarginRequirements(IO2GResponse *response)
+{
+    O("ResponseListener: onMarginRequirements\n");
 }

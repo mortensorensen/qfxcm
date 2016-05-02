@@ -11,32 +11,32 @@ system"l ",getenv[`QFXCMROOT],"/tags.q"
 .fxcm.getofferid:{$[null id:.fxcm.getoffers[][x];'`instrument;id]}
 
 .fxcm.createorderstub:{
-  order:enlist[]!enlist[];
-	order[.fxcm.params.Command]: .fxcm.commands.CreateOrder;
-	order[.fxcm.params.AccountID]: .fxcm.getaccountid[];
-	:order
+  msg:enlist[]!enlist[];
+	msg[.fxcm.params.Command]: .fxcm.commands.CreateOrder;
+	msg[.fxcm.params.AccountID]: .fxcm.getaccountid[];
+	:msg
  }
 
 .fxcm.truemarketopen:{[instrument;amount]
-	order:.fxcm.createorderstub[];
-	order[.fxcm.params.OrderType]: .fxcm.orders.TrueMarketOpen;
-	order[.fxcm.params.OfferID]: .fxcm.getofferid[instrument];
-	order[.fxcm.params.BuySell]: $[amount>0;.fxcm.Buy;.fxcm.Sell];
-	order[.fxcm.params.Amount]: amount * .fxcm.getbaseunitsize[instrument];
-	order[.fxcm.params.TimeInForce]: .fxcm.tif.IOC;
-	order[.fxcm.params.CustomID]: `TrueMarketOrder;
-	.fxcm.send order _(::)
+	msg:.fxcm.createorderstub[];
+	msg[.fxcm.params.OrderType]: .fxcm.orders.TrueMarketOpen;
+	msg[.fxcm.params.OfferID]: .fxcm.getofferid[instrument];
+	msg[.fxcm.params.BuySell]: $[amount>0;.fxcm.Buy;.fxcm.Sell];
+	msg[.fxcm.params.Amount]: amount * .fxcm.getbaseunitsize[instrument];
+	msg[.fxcm.params.TimeInForce]: .fxcm.tif.IOC;
+	msg[.fxcm.params.CustomID]: `TrueMarketOrder;
+	.fxcm.send msg _(::);
  }
 
 .fxcm.truemarketclose:{[tradeid]
-	order:.fxcm.createorderstub[];
-	order[.fxcm.params.OrderType]: .fxcm.orders.TrueMarketClose;
-	order[.fxcm.params.OfferID]: 1;
-	order[.fxcm.params.TradeID]: 1;
-	order[.fxcm.params.BuySell]: 1;
-	order[.fxcm.params.Amount]: 1;
-	order[.fxcm.params.CustomID]: `TrueMarketClose;
-	.fxcm.send order _(::)
+	msg:.fxcm.createorderstub[];
+	msg[.fxcm.params.OrderType]: .fxcm.orders.TrueMarketClose;
+	msg[.fxcm.params.OfferID]: 1;
+	msg[.fxcm.params.TradeID]: 1;
+	msg[.fxcm.params.BuySell]: 1;
+	msg[.fxcm.params.Amount]: 1;
+	msg[.fxcm.params.CustomID]: `TrueMarketClose;
+	.fxcm.send msg _(::);
  }
 
 .fxcm.sub:{[instrument]
@@ -48,12 +48,11 @@ system"l ",getenv[`QFXCMROOT],"/tags.q"
  }
 
 .fxcm.unsub:{[instrument]
-	/ msg:()!();
-	msg:enlist[]!enlist[];
+	msg:()!();
 	msg[.fxcm.params.Command]: .fxcm.commands.SetSubscriptionStatus;
 	msg[.fxcm.params.SubscriptionStatus]: .fxcm.subscribtionstatus.Disable;
 	msg[.fxcm.params.OfferID]: .fxcm.getofferid[instrument];
-	.fxcm.send msg _(::);
+	.fxcm.send msg;
 	/ :msg
  }
 

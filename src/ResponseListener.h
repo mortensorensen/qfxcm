@@ -38,10 +38,16 @@ class ResponseListener : public IO2GResponseListener
     /** Request update data received data handler. */
     virtual void onTablesUpdates(IO2GResponse *data);
 
-    void onOffers(IO2GSession *session, IO2GResponse *response, const char *sInstrument);
-    void onLevel2MarketData(IO2GSession *session, IO2GResponse *response, const char *sInstrument);
-    
-    
+    void onOffers(IO2GResponse *response);
+    void onLevel2MarketData(IO2GResponse *response);
+    void onAccounts(IO2GResponse *response);
+    void onTrades(IO2GResponse *response);
+    void onOrders(IO2GResponse *response);
+    void onClosedTrades(IO2GResponse *response);
+    void onMessages(IO2GResponse *response);
+    void onLastOrderUpdate(IO2GResponse *response);
+    void onSystemProperties(IO2GResponse *response);
+    void onMarginRequirements(IO2GResponse *response);
     
  private:
     long mRefCount;

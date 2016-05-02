@@ -1,6 +1,8 @@
 #include "qforexconnect.h"
 #include "Helpers.h"
 #include <sstream>
+#include "print.cpp"
+
 
 IO2GSession* mpSession;
 SessionStatusListener* mpListener;
@@ -292,19 +294,21 @@ K getTrades(K x)
     IO2GTableIterator tableIterator;
     auto offers = getOffersMap();
     
-    K headers = ktn(KS, 6);
-    kS(headers)[0] = ss((S)"tradeid");
-    kS(headers)[1] = ss((S)"instrument");
-    kS(headers)[2] = ss((S)"openrate");
-    kS(headers)[3] = ss((S)"amount");
-    kS(headers)[4] = ss((S)"opentime");
-    kS(headers)[5] = ss((S)"grosspnl");
+    K headers = ktn(KS, 7);
+    kS(headers)[0] = ss((S)"opentime");
+    kS(headers)[1] = ss((S)"tradeid");
+    kS(headers)[2] = ss((S)"instrument");
+    kS(headers)[3] = ss((S)"openrate");
+    kS(headers)[4] = ss((S)"amount");
+    kS(headers)[5] = ss((S)"buysell");
+    kS(headers)[6] = ss((S)"grosspnl");
     
+    K openTime   = ktn(KZ, 0);
     K tradeId    = ktn(KS, 0);
     K instrument = ktn(KS, 0);
     K openRate   = ktn(KF, 0);
     K amount     = ktn(KJ, 0);
-    K openTime   = ktn(KZ, 0);
+    K buysell    = ktn(KS, 0);
     K grossPnL   = ktn(KF, 0);
     
     while (tradesTable->getNextRow(tableIterator, tradeRow)) {
@@ -316,19 +320,18 @@ K getTrades(K x)
         
         //        Q(it == offers.end(), "Could not get offer table row");
         
+        ja(&openTime,   toKTime(tradeRow->getOpenTime()));
         js(&tradeId,    ss((S)tradeRow->getTradeID()));
         js(&instrument, ss((S)it->first.c_str()));
         ja(&openRate,   kf(tradeRow->getOpenRate()));
-        ja(&amount,     kj(tradeRow->getAmount() > 0 ?
-                           tradeRow->getAmount() :
-                           -tradeRow->getAmount()));
-        ja(&openTime,   toKTime(tradeRow->getOpenTime()));
+        ja(&amount,     kj(tradeRow->getAmount()));
+        js(&buysell,    ss((S)tradeRow->getBuySell()));
         ja(&grossPnL,   kf(tradeRow->getGrossPL()));
         
         tradeRow->release();
     }
     
-    R xT(xD(headers, knk(6, tradeId, instrument, openRate, amount, openTime, grossPnL)));
+    R xT(xD(headers, knk(7, openTime, tradeId, instrument, openRate, amount, buysell, grossPnL)));
 }
 
 //K openPosition(K& dict)
@@ -368,19 +371,17 @@ K sendMessage(K dict)
     if (!mpListener->isConnected())
         login((K)0);
     const char* errorMsg = nullptr;
-    auto valuemap = convertToValueMap(r1(dict), errorMsg);
-    r0(dict);
+    IO2GValueMap* valuemap = convertToValueMap(dict, errorMsg);
     Q(!valuemap, errorMsg);
-    auto request = mpRequestFactory->createOrderRequest(valuemap);
+    O2G2Ptr<IO2GRequest> request = mpRequestFactory->createOrderRequest(valuemap);
     Q(!request, mpRequestFactory->getLastError());
     
     mpResponseListener->setRequestID(request->getRequestID());
     mpSession->sendRequest(request);
-    Q(!mpResponseListener->waitEvents(), "Response waiting timeout expired");
+    valuemap->release();
+//    Q(!mpResponseListener->waitEvents(), "Response waiting timeout expired");
     
-    Sleep(1000); // Wait for the balance update
-    O("Message sent\n");
-    R kb(true);
+    R (K)0;
 }
 
 K getHistoricalPrices(K instrument, K from, K to, K timeFrame)
@@ -583,38 +584,38 @@ static K getPricesFromResponse(IO2GResponse *response)
 
 static IO2GValueMap* convertToValueMap(K dict, const char *&error)
 {
+    // TODO: allow nested valuemaps
+    
     if (dict->t != 99) {
-        O("createValueMap only accepts dicts");
+        error = "createValueMap only accepts dicts";
         return nullptr;
     }
     
     auto valuemap = mpRequestFactory->createValueMap();
-    auto keys = kK(dict)[0];
-    auto vals = kK(dict)[1];
+    K keys = kK(dict)[0];
+    K vals = kK(dict)[1];
+    
     O2GRequestParamsEnum key;
     int type;
-    K val;
-    bool hasError = false;
     
     for (int i = 0; i < keys->n; i++) {
         key = static_cast<O2GRequestParamsEnum>(kJ(keys)[i]);
-        val = kK(vals)[i];
-        type = val->t;
-        if (type == -KS || type == -KC) {
-            valuemap->setString(key, val->s);
-        } else if (type == -KI || type == -KJ) {
-            valuemap->setInt(key, val->j);
-        } else if (type == -KF) {
-            valuemap->setDouble(key, val->f);
-        } else if (type == -KB) {
-            valuemap->setBoolean(key, val->g);
-        } else {
-            std::stringstream ss;
-            ss << "Type " << val->t << " not recognized for key " << (int)key;
-            error = ss.str().c_str();
-//            hasError = true;
-//            break;
+        type = vals->t == 0 ? kK(vals)[i]->t : -abs(vals->t);
+        
+        switch (type) {
+            case -KS:
+            case -KC: valuemap->setString(key, kS(vals)[i]);    break;
+            case -KI:
+            case -KJ: valuemap->setInt(key, kJ(vals)[i]);       break;
+            case -KF: valuemap->setDouble(key, kF(vals)[i]);    break;
+            case -KB: valuemap->setBoolean(key, kG(vals)[i]);   break;
+            default:
+                std::stringstream ss;
+                ss << "Value " << key << ": Type " << type << " not recognized\n";
+                error = ss.str().c_str();
+                return nullptr;
+                
         }
     }
-    return hasError ? nullptr : valuemap;
+    return valuemap;
 }

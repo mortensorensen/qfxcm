@@ -27,11 +27,13 @@ amount:100
 / .fxcm.gettrades[]
 / .fxcm.getservertime[]
 / .fxcm.getbaseunitsize[instrument]
-/ .fxcm.gethistprices[instrument;begin;end;timeframe]
+/ show hist:.fxcm.gethistprices[instrument;begin;end;timeframe]
 / .fxcm.truemarketopen[instrument;amount]
 / .fxcm.subscribeoffers[instrument]
 / .fxcm.unsubscribeoffers[]
-.fxcm.unsub `$"AUD/CAD"
+/ .fxcm.sub `$"AUD/CAD"
+/ .fxcm.unsub `$"AUD/CAD"
+/ .fxcm.quotes
 
 / select from t
 / .fxcm.gettrades[]
@@ -41,6 +43,15 @@ amount:100
 
 / .fxcm.truemarketopen[instrument;amount]
 
-/ .fxcm.testdict[1 2 3!4 5 6]
+/ msg:enlist[]!enlist[];
+/ msg[.fxcm.params.Command]: .fxcm.commands.CreateOrder;
+/ msg[.fxcm.params.OrderType]: .fxcm.orders.TrueMarketOpen;
+/ msg[.fxcm.params.AccountID]: .fxcm.getaccountid[];
+/ msg[.fxcm.params.OfferID]: .fxcm.getofferid[instrument];
+/ msg[.fxcm.params.BuySell]: $[amount>0;.fxcm.Buy;.fxcm.Sell];
+/ msg[.fxcm.params.Amount]: amount * .fxcm.getbaseunitsize[instrument];
+/ / msg[.fxcm.params.TimeInForce]: .fxcm.tif.IOC;
+/ msg[.fxcm.params.CustomID]: `TestTrueMarketOrder;
+/ .fxcm.send msg _(::)
 
-/ .fxcm.createorderstub[]
+
