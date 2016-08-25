@@ -1,6 +1,6 @@
 # Q wrapper for FXCM's ForexConnect API
 
-*Note: This repository is still under development. Actual Q code is still missing!*
+*Note: This repository is still under development!*
 
 Download the ForexConnect API at <http://fxcodebase.com/wiki/index.php/Download>.
 
